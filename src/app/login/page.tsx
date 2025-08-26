@@ -109,7 +109,7 @@ function LoginPageClient() {
         const redirect = searchParams.get('redirect') || '/';
         router.replace(redirect);
       } else if (res.status === 401) {
-        setError('密码错误');
+        setError('密码错误 请联系QQ：7071686 获取密码');
       } else {
         const data = await res.json().catch(() => ({}));
         setError(data.error ?? '服务器错误');
