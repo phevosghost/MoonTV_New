@@ -3,7 +3,7 @@
 import { Heart, PlayCircleIcon, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import React, { useCallback, useEffect,useMemo, useState } from 'react';
+import React, { useCallback,useMemo, useState } from 'react';
 
 import {
   deleteFavorite,
@@ -131,13 +131,6 @@ export default function VideoCard({
     }
   }, [from, actualSource, actualId]);
 
-  // 仅在需要展示心形按钮时才检查收藏状态
-  useEffect(() => {
-    if (config.showHeart && !favoriteChecked) {
-      checkFavoriteStatus();
-    }
-  }, [checkFavoriteStatus, favoriteChecked]); // 注意这里 config.showHeart 在 useMemo 里定义，需要提前定义
-
   const handleToggleFavorite = useCallback(
     async (e: React.MouseEvent) => {
       e.preventDefault();
@@ -264,11 +257,21 @@ export default function VideoCard({
     return configs[from] || configs.search;
   }, [from, isAggregate, actualDoubanId, rate]);
 
-  // 以下渲染逻辑保持不变
+  // 渲染
   return (
     <div
-      className='group relative w-full rounded-lg bg-transparent cursor-pointer transition-all duration-300 ease-in-out hover:scale-[1.05] hover:z-[500]'
-      onClick={handleClick}
+      className="group relative w-full rounded-lg bg-transparent cursor-pointer transition-all duration-300 ease-in-out hover:scale-[1.05] hover:z-[500]"
+      onMouseEnter={() => {
+          // 收藏夹里的卡片直接默认已收藏，不检查数据库
+        if (from === 'favorite' && !favorited) {
+          setFavorited(true);
+          setFavoriteChecked(true);
+          return;
+        }
+        if (config.showHeart && !favoriteChecked) {
+          checkFavoriteStatus();
+        }
+      }}
     >
       {/* 图片和播放按钮 */}
       <div className='relative aspect-[2/3] overflow-hidden rounded-lg'>
@@ -294,15 +297,20 @@ export default function VideoCard({
 
         <div className='absolute inset-0 bg-gradient-to-t from-black/80 via-black-20 to-transparent opacity-0 transition-opacity duration-300 ease-in-out group-hover:opacity-100' />
 
-        {config.showPlayButton && (
-          <div className='absolute inset-0 flex items-center justify-center opacity-0 transition-all duration-300 ease-in-out delay-75 group-hover:opacity-100 group-hover:scale-100'>
-            <PlayCircleIcon
-              size={50}
-              strokeWidth={0.8}
-              className='text-white fill-transparent transition-all duration-300 ease-out hover:fill-green-500 hover:scale-[1.1]'
-            />
-          </div>
-        )}
+      {/* 播放按钮 */}
+      {config.showPlayButton && (
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+              <PlayCircleIcon
+                size={50}
+                strokeWidth={0.8}
+                className="text-white fill-transparent hover:fill-green-500 hover:scale-[1.1] transition"
+                onClick={(e) => {
+                  e.stopPropagation(); // 阻止冒泡
+                  handleClick();       // 只在点击按钮时触发播放
+                }}
+              />
+            </div>
+          )}
 
         {(config.showHeart || config.showCheckCircle) && (
           <div className='absolute bottom-3 right-3 flex gap-3 opacity-0 translate-y-2 transition-all duration-300 ease-in-out group-hover:opacity-100 group-hover:translate-y-0'>
@@ -327,19 +335,30 @@ export default function VideoCard({
           </div>
         )}
 
-        {/* ⭐ 评分显示（左上角小圆圈，可跳转豆瓣） */}
+        {/* ⭐ 评分显示（左上角小圆圈，可跳转豆瓣或 Bangumi） */}
         {config.showRating && rate && actualDoubanId && (
           <div
             onClick={(e) => {
               e.stopPropagation(); // 阻止触发卡片点击
-              window.open(`https://movie.douban.com/subject/${actualDoubanId}`, '_blank');
+
+              const searchParams = new URLSearchParams(window.location.search);
+              const type = searchParams.get("type");
+
+              if (type === "anime") {
+                // 动漫 → Bangumi
+                window.open(`https://bangumi.tv/subject/${actualDoubanId}`, "_blank");
+              } else {
+                // 默认 → 豆瓣
+                window.open(`https://movie.douban.com/subject/${actualDoubanId}`, "_blank");
+              }
             }}
             className="absolute top-2 left-2 bg-pink-500 text-white text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-full shadow-md cursor-pointer hover:bg-pink-600 transition"
-            title="去豆瓣查看详情"
+            title="去详情页查看"
           >
             {rate}
           </div>
         )}
+
 
         {/* 📅 年份显示（左上角） */}
         {from === 'search' && actualYear && actualYear.toLowerCase() !== 'unknown' && (

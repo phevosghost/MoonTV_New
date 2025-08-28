@@ -11,8 +11,23 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2.5.1",
+    date: "2025-08-28",
+    added: [
+      // 无新增内容
+    ],
+    changed: [
+    "优化收藏状态检测,减少数据库请求",
+    "优化搜索筛选展示逻辑",
+    "边缘点击不触发播放"
+    ],
+    fixed: [
+    "修复动漫番剧详情页面跳转"
+    ]
+  },
+  {
     version: "2.4.7",
-    date: "2025-08-22",
+    date: "2025-08-26",
     added: [
     "搜索结果添加筛选功能"
     ],

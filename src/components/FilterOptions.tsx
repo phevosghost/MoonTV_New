@@ -1,19 +1,38 @@
 'use client';
 import { ChevronDown } from 'lucide-react';
-import { useEffect, useRef,useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface FilterOptionsProps {
   title: string;
   options: string[];
   selectedOptions: string[];
   onChange: (options: string[]) => void;
+  openFilter: string | null;
+  setOpenFilter: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
-export default function FilterOptions({ title, options, selectedOptions, onChange }: FilterOptionsProps) {
-  const [open, setOpen] = useState(false);
+export default function FilterOptions({
+  title,
+  options,
+  selectedOptions,
+  onChange,
+  openFilter,
+  setOpenFilter,
+}: FilterOptionsProps) {
+  // ✅ 由父组件控制是否展开
+  const open = openFilter === title;
+
   const [popupStyles, setPopupStyles] = useState<React.CSSProperties>({});
   const buttonRef = useRef<HTMLButtonElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
+
+  const toggleOpen = () => {
+    if (open) {
+      setOpenFilter(null); // 已展开 → 关闭
+    } else {
+      setOpenFilter(title); // 打开自己，关闭其他
+    }
+  };
 
   const handleOptionClick = (option: string) => {
     if (selectedOptions.includes(option)) {
@@ -27,7 +46,6 @@ export default function FilterOptions({ title, options, selectedOptions, onChang
   useEffect(() => {
     if (open && buttonRef.current && popupRef.current) {
       const btnRect = buttonRef.current.getBoundingClientRect();
-      const popup = popupRef.current;
       const screenWidth = window.innerWidth;
 
       let left = btnRect.left;
@@ -47,7 +65,7 @@ export default function FilterOptions({ title, options, selectedOptions, onChang
     <div className="relative inline-block mr-2 mb-2">
       <button
         ref={buttonRef}
-        onClick={() => setOpen(!open)}
+        onClick={toggleOpen}
         className="flex items-center gap-1 px-3 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
       >
         {title}
@@ -63,12 +81,13 @@ export default function FilterOptions({ title, options, selectedOptions, onChang
             bg-white dark:bg-gray-800
             border border-gray-200 dark:border-gray-700
             rounded-lg shadow-lg p-4
-            max-h-[70vh] overflow-auto
+            max-h-[50vh] overflow-auto
           "
         >
-          <div className="grid gap-2"
+          <div
+            className="grid gap-2"
             style={{
-              gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))'
+              gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))',
             }}
           >
             {options.map((option) => (

@@ -39,6 +39,9 @@ function SearchPageClient() {
   const [selectedSources, setSelectedSources] = useState<string[]>([]);
   const [selectedTitles, setSelectedTitles] = useState<string[]>([]);
   const [selectedYears, setSelectedYears] = useState<string[]>([]);
+  // 新增状态：记录当前展开的筛选框
+  const [openFilter, setOpenFilter] = useState<string | null>(null);
+
 
   const [viewMode, setViewMode] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
@@ -180,7 +183,10 @@ function SearchPageClient() {
     !searchParams.get('q') && document.getElementById('searchInput')?.focus();
     getSearchHistory().then(setSearchHistory);
     const unsubscribe = subscribeToDataUpdates('searchHistoryUpdated', setSearchHistory);
-    const handleScroll = () => setShowBackToTop((document.body.scrollTop || 0) > 300);
+    const handleScroll = () => {
+      setShowBackToTop((document.body.scrollTop || 0) > 300);
+      setOpenFilter(null);
+    };
     document.body.addEventListener('scroll', handleScroll, { passive: true });
     return () => {
       unsubscribe();
@@ -262,8 +268,9 @@ function SearchPageClient() {
               onChange={handleInputChange}
               onFocus={handleInputFocus}
               placeholder="搜索电影、电视剧..."
-              className="w-full h-12 rounded-lg bg-gray-50/80 py-3 pl-10 pr-4 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white border border-gray-200/50 shadow-sm dark:bg-gray-800 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:bg-gray-700 dark:border-gray-700"
+              className="w-full h-12 rounded-lg bg-gray-50/80 py-3 pl-10 pr-4 text-base text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white border border-gray-200/50 shadow-sm dark:bg-gray-800 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:bg-gray-700 dark:border-gray-700"
             />
+
             <SearchSuggestions query={searchQuery} isVisible={showSuggestions} onSelect={handleSuggestionSelect} onClose={() => setShowSuggestions(false)} />
           </form>
         </div>
@@ -271,24 +278,31 @@ function SearchPageClient() {
         {/* 筛选组件弹窗 */}
         {showResults && searchResults.length > 0 && (
           <div className="flex gap-4 flex-wrap mb-6 max-w-[95%] mx-auto">
-            <FilterOptions
-              title="来源"
-              options={sourceOptions}
-              selectedOptions={selectedSources}
-              onChange={setSelectedSources}
-            />
-            <FilterOptions
-              title="标题"
-              options={titleOptions}
-              selectedOptions={selectedTitles}
-              onChange={setSelectedTitles}
-            />
-            <FilterOptions
-              title="年份"
-              options={yearOptions}
-              selectedOptions={selectedYears}
-              onChange={setSelectedYears}
-            />
+          <FilterOptions
+            title="来源"
+            options={sourceOptions}
+            selectedOptions={selectedSources}
+            onChange={setSelectedSources}
+            openFilter={openFilter}
+            setOpenFilter={setOpenFilter}
+          />
+          <FilterOptions
+            title="标题"
+            options={titleOptions}
+            selectedOptions={selectedTitles}
+            onChange={setSelectedTitles}
+            openFilter={openFilter}
+            setOpenFilter={setOpenFilter}
+          />
+          <FilterOptions
+            title="年份"
+            options={yearOptions}
+            selectedOptions={selectedYears}
+            onChange={setSelectedYears}
+            openFilter={openFilter}
+            setOpenFilter={setOpenFilter}
+          />
+
           </div>
         )}
 
