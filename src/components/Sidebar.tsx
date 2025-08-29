@@ -70,6 +70,20 @@ const Sidebar = ({ onToggle, activePath = '/' }: SidebarProps) => {
     return false; // 默认展开
   });
 
+  // 检查是否启用简洁模式 - 使用 useEffect 来避免 SSR 问题
+  const [simpleMode, setSimpleMode] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+    if (typeof window !== 'undefined') {
+      const savedSimpleMode = localStorage.getItem('simpleMode');
+      if (savedSimpleMode !== null) {
+        setSimpleMode(JSON.parse(savedSimpleMode));
+      }
+    }
+  }, []);
+
   // 首次挂载时读取 localStorage，以便刷新后仍保持上次的折叠状态
   useLayoutEffect(() => {
     const saved = localStorage.getItem('sidebarCollapsed');
@@ -237,44 +251,46 @@ const Sidebar = ({ onToggle, activePath = '/' }: SidebarProps) => {
               </Link>
             </nav>
 
-            {/* 菜单项 */}
-            <div className='flex-1 overflow-y-auto px-2 pt-4'>
-              <div className='space-y-1'>
-                {menuItems.map((item) => {
-                  // 检查当前路径是否匹配这个菜单项
-                  const typeMatch = item.href.match(/type=([^&]+)/)?.[1];
+            {/* 菜单项 - 简洁模式下不显示电影、剧集、动漫、综艺等分类，但在服务器端渲染时先不渲染 */}
+            {isClient && !simpleMode && (
+              <div className='flex-1 overflow-y-auto px-2 pt-4'>
+                <div className='space-y-1'>
+                  {menuItems.map((item) => {
+                    // 检查当前路径是否匹配这个菜单项
+                    const typeMatch = item.href.match(/type=([^&]+)/)?.[1];
 
-                  // 解码URL以进行正确的比较
-                  const decodedActive = decodeURIComponent(active);
-                  const decodedItemHref = decodeURIComponent(item.href);
+                    // 解码URL以进行正确的比较
+                    const decodedActive = decodeURIComponent(active);
+                    const decodedItemHref = decodeURIComponent(item.href);
 
-                  const isActive =
-                    decodedActive === decodedItemHref ||
-                    (decodedActive.startsWith('/douban') &&
-                      decodedActive.includes(`type=${typeMatch}`));
-                  const Icon = item.icon;
-                  return (
-                    <Link
-                      key={item.label}
-                      href={item.href}
-                      onClick={() => setActive(item.href)}
-                      data-active={isActive}
-                      className={`group flex items-center rounded-lg px-2 py-2 pl-4 text-sm text-gray-700 hover:bg-gray-100/30 hover:text-green-600 data-[active=true]:bg-green-500/20 data-[active=true]:text-green-700 transition-colors duration-200 min-h-[40px] dark:text-gray-300 dark:hover:text-green-400 dark:data-[active=true]:bg-green-500/10 dark:data-[active=true]:text-green-400 ${isCollapsed ? 'w-full max-w-none mx-0' : 'mx-0'
-                        } gap-3 justify-start`}
-                    >
-                      <div className='w-4 h-4 flex items-center justify-center'>
-                        <Icon className='h-4 w-4 text-gray-500 group-hover:text-green-600 data-[active=true]:text-green-700 dark:text-gray-400 dark:group-hover:text-green-400 dark:data-[active=true]:text-green-400' />
-                      </div>
-                      {!isCollapsed && (
-                        <span className='whitespace-nowrap transition-opacity duration-200 opacity-100'>
-                          {item.label}
-                        </span>
-                      )}
-                    </Link>
-                  );
-                })}
+                    const isActive =
+                      decodedActive === decodedItemHref ||
+                      (decodedActive.startsWith('/douban') &&
+                        decodedActive.includes(`type=${typeMatch}`));
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.label}
+                        href={item.href}
+                        onClick={() => setActive(item.href)}
+                        data-active={isActive}
+                        className={`group flex items-center rounded-lg px-2 py-2 pl-4 text-sm text-gray-700 hover:bg-gray-100/30 hover:text-green-600 data-[active=true]:bg-green-500/20 data-[active=true]:text-green-700 transition-colors duration-200 min-h-[40px] dark:text-gray-300 dark:hover:text-green-400 dark:data-[active=true]:bg-green-500/10 dark:data-[active=true]:text-green-400 ${isCollapsed ? 'w-full max-w-none mx-0' : 'mx-0'
+                          } gap-3 justify-start`}
+                      >
+                        <div className='w-4 h-4 flex items-center justify-center'>
+                          <Icon className='h-4 w-4 text-gray-500 group-hover:text-green-600 data-[active=true]:text-green-700 dark:text-gray-400 dark:group-hover:text-green-400 dark:data-[active=true]:text-green-400' />
+                        </div>
+                        {!isCollapsed && (
+                          <span className='whitespace-nowrap transition-opacity duration-200 opacity-100'>
+                            {item.label}
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </aside>
         <div

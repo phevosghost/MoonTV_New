@@ -47,6 +47,20 @@ const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
     },
   ]);
 
+  // 检查是否启用简洁模式 - 使用状态管理
+  const [simpleMode, setSimpleMode] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+    if (typeof window !== 'undefined') {
+      const savedSimpleMode = localStorage.getItem('simpleMode');
+      if (savedSimpleMode !== null) {
+        setSimpleMode(JSON.parse(savedSimpleMode));
+      }
+    }
+  }, []);
+
   useEffect(() => {
     getCustomCategories().then((categories) => {
       if (categories.length > 0) {
@@ -89,11 +103,24 @@ const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
       <ul className='flex items-center overflow-x-auto scrollbar-hide'>
         {navItems.map((item) => {
           const active = isActive(item.href);
+          
+          // 简洁模式下只显示首页和搜索，但在服务器端渲染时先不渲染
+          if (!isClient) {
+            return null; // 服务器端渲染时不显示任何内容，避免闪烁
+          }
+          
+          if (simpleMode && !['/', '/search'].includes(item.href)) {
+            return null;
+          }
+
           return (
             <li
               key={item.href}
               className='flex-shrink-0'
-              style={{ width: '20vw', minWidth: '20vw' }}
+              style={{
+                width: simpleMode ? '50vw' : '20vw',
+                minWidth: simpleMode ? '50vw' : '20vw'
+              }}
             >
               <Link
                 href={item.href}
