@@ -63,20 +63,22 @@ function SearchPageClient() {
   const aggregatedResults = useMemo(() => {
     const map = new Map<string, SearchResult[]>();
     searchResults.forEach((item) => {
-      const key = `${item.title.replaceAll(' ', '')}-${item.year || 'unknown'}-${item.episodes.length === 1 ? 'movie' : 'tv'}`;
+      // 使用标准化的标题（移除多余空格但保留单词间的单个空格）作为聚合键的一部分
+      const normalizedTitle = item.title.trim().replace(/\s+/g, ' ');
+      const key = `${normalizedTitle}-${item.year || 'unknown'}-${item.episodes.length === 1 ? 'movie' : 'tv'}`;
       const arr = map.get(key) || [];
       arr.push(item);
       map.set(key, arr);
     });
     return Array.from(map.entries()).sort((a, b) => {
-      const aExactMatch = a[1][0].title.replaceAll(' ', '').includes(searchQuery.trim().replaceAll(' ', ''));
-      const bExactMatch = b[1][0].title.replaceAll(' ', '').includes(searchQuery.trim().replaceAll(' ', ''));
+      const aExactMatch = a[1][0].title.toLowerCase().includes(searchQuery.trim().toLowerCase());
+      const bExactMatch = b[1][0].title.toLowerCase().includes(searchQuery.trim().toLowerCase());
       if (aExactMatch && !bExactMatch) return -1;
       if (!aExactMatch && bExactMatch) return 1;
 
       const aYear = a[1][0].year;
       const bYear = b[1][0].year;
-      if (aYear === bYear) return a[0].localeCompare(b[0]);
+      if (aYear === bYear) return a[1][0].title.localeCompare(b[1][0].title);
       if (aYear === 'unknown') return 1;
       if (bYear === 'unknown') return 1;
       return aYear > bYear ? -1 : 1;

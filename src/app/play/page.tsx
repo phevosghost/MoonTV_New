@@ -748,8 +748,8 @@ function PlayPageClient() {
                     const filteredResults: SearchResult[] = data.pageResults.filter(
                       (r: SearchResult) => {
                         const titleMatch =
-                          r.title.replaceAll(' ', '').toLowerCase() ===
-                          videoTitleRef.current.replaceAll(' ', '').toLowerCase();
+                          r.title.trim().replace(/\s+/g, ' ').toLowerCase() ===
+                          videoTitleRef.current.trim().replace(/\s+/g, ' ').toLowerCase();
                         const yearMatch = videoYearRef.current
                           ? r.year.toLowerCase() ===
                             videoYearRef.current.toLowerCase()
