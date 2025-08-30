@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps, @typescript-eslint/no-explicit-any */
 'use client';
 
-import { ChevronUp, Search, X } from 'lucide-react';
+import { ChevronUp, RotateCcw,Search, X } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useMemo } from 'react';
 import { useEffect,useRef, useState } from 'react';
@@ -19,6 +19,7 @@ import FailedSourcesDisplay from '@/components/FailedSourcesDisplay';
 import FilterOptions from '@/components/FilterOptions';
 import PageLayout from '@/components/PageLayout';
 import SearchSuggestions from '@/components/SearchSuggestions';
+import SourceSelector from '@/components/SourceSelector';
 import VideoCard from '@/components/VideoCard';
 
 
@@ -35,10 +36,41 @@ function SearchPageClient() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [failedSources, setFailedSources] = useState<{ name: string; key: string; error: string }[]>([]);
 
-  // 筛选状态
-  const [selectedSources, setSelectedSources] = useState<string[]>([]);
-  const [selectedTitles, setSelectedTitles] = useState<string[]>([]);
-  const [selectedYears, setSelectedYears] = useState<string[]>([]);
+  // 筛选状态 - 从 URL 参数初始化，如果没有URL参数则从保存的源读取
+  const [searchSources, setSearchSources] = useState<string[]>(() => {
+    const sources = searchParams.get('sources');
+    if (sources) {
+      return sources.split(',');
+    }
+    
+    // 如果没有URL参数，检查是否有保存的源
+    if (typeof window !== 'undefined') {
+      const savedSources = localStorage.getItem('savedSources');
+      if (savedSources) {
+        try {
+          return JSON.parse(savedSources);
+        } catch (error) {
+          console.error('Failed to parse saved sources:', error);
+        }
+      }
+    }
+    
+    return [];
+  });
+  const [selectedTitles, setSelectedTitles] = useState<string[]>(() => {
+    const titles = searchParams.get('titles');
+    return titles ? titles.split(',') : [];
+  });
+  const [selectedYears, setSelectedYears] = useState<string[]>(() => {
+    const years = searchParams.get('years');
+    return years ? years.split(',') : [];
+  });
+
+  // 搜索结果来源筛选状态 - 从 URL 参数初始化
+  const [filterSources, setFilterSources] = useState<string[]>(() => {
+    const sources = searchParams.get('filter_sources');
+    return sources ? sources.split(',') : [];
+  });
   // 新增状态：记录当前展开的筛选框
   const [openFilter, setOpenFilter] = useState<string | null>(null);
 
@@ -88,17 +120,29 @@ function SearchPageClient() {
   // 用于筛选后的聚合结果，保证类型安全
   const filteredAggregatedResults: [string, SearchResult[]][] = useMemo(() => {
     return aggregatedResults
+      .filter(([key, group]) => {
+        // 来源筛选：如果没有选择任何来源（filterSources.length === 0），默认显示全部；如果选择了来源，只保留包含至少一个选中来源的影片组
+        const sourceMatch = filterSources.length === 0 ||
+          group.some(item => filterSources.includes(item.source_name));
+        // 标题筛选：如果选择了标题，只保留标题匹配的影片组
+        const titleMatch = selectedTitles.length === 0 ||
+          selectedTitles.includes(group[0].title);
+        // 年份筛选：如果选择了年份，只保留年份匹配的影片组
+        const yearMatch = selectedYears.length === 0 ||
+          selectedYears.includes(group[0].year);
+        return sourceMatch && titleMatch && yearMatch;
+      })
       .map(([key, group]) => {
+        // 在组内也进行筛选，确保组内每个项目都符合筛选条件
         const filteredGroup = group.filter((item) => {
-          const sourceMatch = selectedSources.length === 0 || selectedSources.includes(item.source_name);
           const titleMatch = selectedTitles.length === 0 || selectedTitles.includes(item.title);
           const yearMatch = selectedYears.length === 0 || selectedYears.includes(item.year);
-          return sourceMatch && titleMatch && yearMatch;
+          return titleMatch && yearMatch;
         });
         return [key, filteredGroup] as [string, SearchResult[]];
       })
       .filter(([_, group]) => group.length > 0);
-  }, [aggregatedResults, selectedSources, selectedTitles, selectedYears]);
+  }, [aggregatedResults, filterSources, selectedTitles, selectedYears]);
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -115,6 +159,11 @@ function SearchPageClient() {
 
       const params = new URLSearchParams({ q: query.trim() });
       if (!streamEnabled) params.set('stream', '0');
+      
+      // 添加选中的搜索源到请求参数
+      if (searchSources.length > 0) {
+        params.set('sources', searchSources.join(','));
+      }
 
       const response = await fetch(`/api/search?${params.toString()}`, {
         signal: controller.signal,
@@ -210,6 +259,40 @@ function SearchPageClient() {
     }
   }, [searchParams]);
 
+  // 更新筛选状态到 URL
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams);
+    
+    if (searchSources.length > 0) {
+      params.set('sources', searchSources.join(','));
+    } else {
+      params.delete('sources');
+    }
+    
+    if (filterSources.length > 0) {
+      params.set('filter_sources', filterSources.join(','));
+    } else {
+      params.delete('filter_sources');
+    }
+    
+    if (selectedTitles.length > 0) {
+      params.set('titles', selectedTitles.join(','));
+    } else {
+      params.delete('titles');
+    }
+    
+    if (selectedYears.length > 0) {
+      params.set('years', selectedYears.join(','));
+    } else {
+      params.delete('years');
+    }
+    
+    // 只在有搜索查询时才更新 URL
+    if (searchParams.get('q')) {
+      window.history.replaceState({}, '', `/search?${params.toString()}`);
+    }
+  }, [filterSources, selectedTitles, selectedYears, searchParams]); // 移除 selectedSources 依赖，避免选择搜索源时触发重新搜索
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchQuery(value);
@@ -230,7 +313,13 @@ function SearchPageClient() {
     setShowSuggestions(false);
     fetchSearchResults(trimmed);
     addSearchHistory(trimmed);
-    window.history.pushState({}, '', `/search?q=${encodeURIComponent(trimmed)}`);
+    // 更新URL包含选中的搜索源
+    const urlParams = new URLSearchParams();
+    urlParams.set('q', trimmed);
+    if (searchSources.length > 0) {
+      urlParams.set('sources', searchSources.join(','));
+    }
+    window.history.pushState({}, '', `/search?${urlParams.toString()}`);
   };
 
   const handleSuggestionSelect = (suggestion: string) => {
@@ -240,7 +329,13 @@ function SearchPageClient() {
     setShowResults(true);
     fetchSearchResults(suggestion);
     addSearchHistory(suggestion);
-    window.history.pushState({}, '', `/search?q=${encodeURIComponent(suggestion)}`);
+    // 更新URL包含选中的搜索源
+    const urlParams = new URLSearchParams();
+    urlParams.set('q', suggestion);
+    if (searchSources.length > 0) {
+      urlParams.set('sources', searchSources.join(','));
+    }
+    window.history.pushState({}, '', `/search?${urlParams.toString()}`);
   };
 
   const scrollToTop = () => {
@@ -259,22 +354,35 @@ function SearchPageClient() {
   return (
     <PageLayout activePath="/search">
       <div className="px-4 sm:px-10 py-4 sm:py-8 overflow-visible mb-10">
-        {/* 搜索框 */}
-        <div className="mb-4">
-          <form onSubmit={handleSearch} className="max-w-2xl mx-auto relative">
-            <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
-            <input
-              id="searchInput"
-              type="text"
-              value={searchQuery}
-              onChange={handleInputChange}
-              onFocus={handleInputFocus}
-              placeholder="搜索电影、电视剧..."
-              className="w-full h-12 rounded-lg bg-gray-50/80 py-3 pl-10 pr-4 text-base text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white border border-gray-200/50 shadow-sm dark:bg-gray-800 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:bg-gray-700 dark:border-gray-700"
-            />
+        {/* 搜索框和搜索源选择器 - 作为一个整体 */}
+        <div className="mb-4 max-w-2xl mx-auto">
+          <div className="flex items-center">
+            {/* 搜索源选择器 - 在搜索框左侧，作为一个整体 */}
+            <div className="flex-shrink-0">
+              <SourceSelector
+                selectedSources={searchSources}
+                onChange={setSearchSources}
+                openFilter={openFilter}
+                setOpenFilter={setOpenFilter}
+              />
+            </div>
+            
+            {/* 搜索框 */}
+            <form onSubmit={handleSearch} className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
+              <input
+                id="searchInput"
+                type="text"
+                value={searchQuery}
+                onChange={handleInputChange}
+                onFocus={handleInputFocus}
+                placeholder="搜索电影、电视剧..."
+                className="w-full h-12 rounded-r-lg rounded-l-none bg-gray-50/80 py-3 pl-10 pr-4 text-base text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white border border-gray-200/50 border-l-0 shadow-sm dark:bg-gray-800 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:bg-gray-700 dark:border-gray-700 dark:border-l-0"
+              />
 
-            <SearchSuggestions query={searchQuery} isVisible={showSuggestions} onSelect={handleSuggestionSelect} onClose={() => setShowSuggestions(false)} />
-          </form>
+              <SearchSuggestions query={searchQuery} isVisible={showSuggestions} onSelect={handleSuggestionSelect} onClose={() => setShowSuggestions(false)} />
+            </form>
+          </div>
         </div>
 
         {/* 筛选组件弹窗 */}
@@ -283,8 +391,8 @@ function SearchPageClient() {
           <FilterOptions
             title="来源"
             options={sourceOptions}
-            selectedOptions={selectedSources}
-            onChange={setSelectedSources}
+            selectedOptions={filterSources}
+            onChange={setFilterSources}
             openFilter={openFilter}
             setOpenFilter={setOpenFilter}
           />
@@ -304,7 +412,24 @@ function SearchPageClient() {
             openFilter={openFilter}
             setOpenFilter={setOpenFilter}
           />
-
+          
+          {/* 全局清空筛选按钮 - 只清空标题、年份和来源筛选，不包含搜索源 */}
+          {(filterSources.length > 0 || selectedTitles.length > 0 || selectedYears.length > 0) && (
+            <div className="flex items-center bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden mr-2 mb-2">
+              <button
+                onClick={() => {
+                  setFilterSources([]);
+                  setSelectedTitles([]);
+                  setSelectedYears([]);
+                }}
+                className="flex items-center gap-1 px-3 py-2 text-sm font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                title="清空所有筛选条件"
+              >
+                <RotateCcw className="w-4 h-4" />
+                清空筛选
+              </button>
+            </div>
+          )}
           </div>
         )}
 
@@ -369,7 +494,9 @@ function SearchPageClient() {
                   ))
                 : searchResults
                     .filter((item) => {
-                      const sourceMatch = selectedSources.length === 0 || selectedSources.includes(item.source_name);
+                      // 来源筛选：如果没有选择任何来源（filterSources.length === 0），默认显示全部；如果选择了来源，只保留包含至少一个选中来源的影片
+                      const sourceMatch = filterSources.length === 0 ||
+                        filterSources.includes(item.source_name);
                       const titleMatch = selectedTitles.length === 0 || selectedTitles.includes(item.title);
                       const yearMatch = selectedYears.length === 0 || selectedYears.includes(item.year);
                       return sourceMatch && titleMatch && yearMatch;
@@ -416,7 +543,7 @@ function SearchPageClient() {
                     <button
                       onClick={() => {
                         setSearchQuery(item);
-                        router.push(`/search?q=${encodeURIComponent(item.trim())}`);
+                        router.push(`/search?q=${item.trim()}`);
                       }}
                       className="px-4 py-2 bg-gray-500/10 hover:bg-gray-300 rounded-full text-sm text-gray-700 transition-colors duration-200 dark:bg-gray-700/50 dark:hover:bg-gray-600 dark:text-gray-300"
                     >

@@ -12,7 +12,16 @@ export async function GET(request: Request) {
   const enableStream = streamParam !== '0'; // 默认开启流式
 
   const config = await getConfig();
-  const apiSites = config.SourceConfig.filter((site) => !site.disabled);
+  
+  // 获取选中的搜索源
+  const selectedSourcesParam = searchParams.get('sources');
+  let apiSites = config.SourceConfig.filter((site) => !site.disabled);
+  
+  // 如果指定了搜索源，只使用选中的搜索源
+  if (selectedSourcesParam) {
+    const selectedSources = selectedSourcesParam.split(',');
+    apiSites = apiSites.filter(site => selectedSources.includes(site.key));
+  }
 
   const encoder = new TextEncoder();
   const { readable, writable } = new TransformStream();

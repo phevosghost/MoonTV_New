@@ -11,6 +11,20 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2.7.0",
+    date: "2025-08-30",
+    added: [
+    "搜索添加对源的选择功能"
+    ],
+    changed: [
+    "优化筛选",
+    "简洁模式跳过豆瓣数据加载"
+    ],
+    fixed: [
+      // 无修复内容
+    ]
+  },
+  {
     version: "2.6.4",
     date: "2025-08-30",
     added: [

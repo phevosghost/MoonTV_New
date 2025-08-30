@@ -85,6 +85,16 @@ function HomeClient() {
       try {
         setLoading(true);
 
+        // 检查是否启用简洁模式
+        const savedSimpleMode = localStorage.getItem('simpleMode');
+        const isSimpleMode = savedSimpleMode ? JSON.parse(savedSimpleMode) : false;
+
+        if (isSimpleMode) {
+          // 简洁模式下跳过豆瓣数据获取
+          setLoading(false);
+          return;
+        }
+
         // 并行获取热门电影、热门剧集和热门综艺
         const [moviesData, tvShowsData, varietyShowsData, bangumiCalendarData] =
           await Promise.all([

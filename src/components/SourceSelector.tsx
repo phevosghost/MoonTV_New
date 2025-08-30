@@ -1,0 +1,231 @@
+'use client';
+import { ChevronDown, Save,Settings } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import Swal from 'sweetalert2';
+
+import { getAvailableApiSitesClient } from '@/lib/config.client';
+
+interface SourceSelectorProps {
+  selectedSources: string[];
+  onChange: (sources: string[]) => void;
+  openFilter: string | null;
+  setOpenFilter: React.Dispatch<React.SetStateAction<string | null>>;
+}
+
+export default function SourceSelector({
+  selectedSources,
+  onChange,
+  openFilter,
+  setOpenFilter,
+}: SourceSelectorProps) {
+  const [availableSources, setAvailableSources] = useState<{ key: string; name: string }[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // 由父组件控制是否展开
+  const open = openFilter === 'sources';
+
+  const [popupStyles, setPopupStyles] = useState<React.CSSProperties>({});
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
+
+  // 加载可用的搜索源 - 只在客户端执行
+  useEffect(() => {
+    // 确保在客户端执行
+    if (typeof window !== 'undefined') {
+      const loadSources = async () => {
+        try {
+          const sites = await getAvailableApiSitesClient();
+          setAvailableSources(sites.map(site => ({ key: site.key, name: site.name })));
+        } catch (error) {
+          console.error('Failed to load sources:', error);
+          setAvailableSources([]); // 确保不会因为错误导致状态未更新
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      
+      loadSources();
+    } else {
+      // 在服务端渲染时直接设置为完成状态
+      setIsLoading(false);
+    }
+  }, []);
+
+  const toggleOpen = () => {
+    if (open) {
+      setOpenFilter(null); // 已展开 → 关闭
+    } else {
+      setOpenFilter('sources'); // 打开自己，关闭其他
+    }
+  };
+
+  const handleSourceClick = (sourceKey: string) => {
+    if (selectedSources.includes(sourceKey)) {
+      onChange(selectedSources.filter(key => key !== sourceKey));
+    } else {
+      onChange([...selectedSources, sourceKey]);
+    }
+  };
+
+
+  const handleClearAll = () => {
+    onChange([]);
+  };
+
+  const handleSaveSources = () => {
+    localStorage.setItem('savedSources', JSON.stringify(selectedSources));
+    
+    // 显示保存成功提示
+    Swal.fire({
+      icon: 'success',
+      title: '保存成功',
+      text: '只保存在本地',
+      toast: true,
+      position: 'top-end',
+      showConfirmButton: false,
+      timer: 2000,
+      timerProgressBar: true,
+    });
+  };
+
+  // 加载保存的搜索源，并清理不存在的源
+  useEffect(() => {
+    if (typeof window !== 'undefined' && availableSources.length > 0) {
+      const savedSources = localStorage.getItem('savedSources');
+      if (savedSources) {
+        try {
+          const parsedSources = JSON.parse(savedSources);
+          // 确保保存的源在可用源列表中
+          const validSources = parsedSources.filter((source: string) =>
+            availableSources.some(avail => avail.key === source)
+          );
+          
+          // 如果保存的源中有不存在的源，更新本地存储
+          if (validSources.length !== parsedSources.length) {
+            localStorage.setItem('savedSources', JSON.stringify(validSources));
+          }
+          
+          if (validSources.length > 0) {
+            onChange(validSources);
+          }
+        } catch (error) {
+          console.error('Failed to parse saved sources:', error);
+        }
+      }
+    }
+  }, [availableSources, onChange]);
+
+  // 计算弹窗位置，防止超出屏幕
+  useEffect(() => {
+    if (open && buttonRef.current && popupRef.current) {
+      const btnRect = buttonRef.current.getBoundingClientRect();
+      const screenWidth = window.innerWidth;
+
+      let left = btnRect.left;
+      const top = btnRect.bottom + 4; // 下方间距
+      const width = Math.min(screenWidth - 16, 400); // 弹窗最大宽度400，留一点边距
+
+      // 如果右边超出屏幕，向左移动
+      if (left + width > screenWidth - 8) {
+        left = Math.max(8, screenWidth - width - 8);
+      }
+
+      setPopupStyles({ left, top, width });
+    }
+  }, [open]);
+
+  if (isLoading) {
+    return (
+      <div className="relative inline-block">
+        <div className="flex items-center bg-gray-200 dark:bg-gray-700 rounded-l-lg overflow-hidden">
+          <button
+            className="flex items-center gap-1 px-3 h-12 text-sm font-medium opacity-50"
+            disabled
+          >
+            <Settings className="w-4 h-4" />
+            <ChevronDown className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // 如果没有可用的搜索源，不显示组件
+  if (availableSources.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="relative inline-block">
+      <div className="flex items-center bg-gray-200 dark:bg-gray-700 rounded-l-lg overflow-hidden">
+        <button
+          ref={buttonRef}
+          onClick={toggleOpen}
+          className="flex items-center gap-1 px-3 h-12 text-sm font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+        >
+          <Settings className="w-4 h-4" />
+          {selectedSources.length > 0 && (
+            <span className="inline-flex items-center justify-center w-5 h-5 text-xs bg-green-500 text-white rounded-full ml-1">
+              {selectedSources.length}
+            </span>
+          )}
+          <ChevronDown className={`w-4 h-4 transition-transform ${open ? 'rotate-180' : 'rotate-0'}`} />
+        </button>
+        
+      </div>
+
+      {open && (
+        <div
+          ref={popupRef}
+          style={popupStyles}
+          className="
+            fixed z-50
+            bg-white dark:bg-gray-800
+            border border-gray-200 dark:border-gray-700
+            rounded-lg shadow-lg p-4
+            max-h-[50vh] overflow-auto
+          "
+        >
+          <div className="mb-3 flex gap-2">
+            <button
+              onClick={handleSaveSources}
+              className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-800/50 flex items-center gap-1"
+              title="保存当前选中的搜索源"
+            >
+              <Save className="w-3 h-3" />
+              保存
+            </button>
+            <button
+              onClick={handleClearAll}
+              className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+            >
+              清空
+            </button>
+          </div>
+          
+          <div
+            className="grid gap-2"
+            style={{
+              gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',
+            }}
+          >
+            {availableSources.map((source) => (
+              <button
+                key={source.key}
+                onClick={() => handleSourceClick(source.key)}
+                className={`px-3 py-2 text-sm rounded-lg transition-all duration-200 text-left ${
+                  selectedSources.includes(source.key)
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-700'
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100/80 dark:hover:bg-gray-700/80'
+                }`}
+                title={source.name}
+              >
+                {source.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
