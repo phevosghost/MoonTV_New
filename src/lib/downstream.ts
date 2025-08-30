@@ -19,7 +19,7 @@ interface ApiSearchItem {
 const M3U8_PATTERN = /(https?:\/\/[^"'\s]+?\.m3u8)/g;
 
 /** 封装带超时的 fetch */
-async function fetchWithTimeout(url: string, options: RequestInit, timeout = 5000): Promise<Response> {
+async function fetchWithTimeout(url: string, options: RequestInit, timeout = 3000): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
   try {
@@ -102,7 +102,7 @@ export async function* searchFromApiStream(
   try {
     const apiUrl = apiSite.api + API_CONFIG.search.path + encodeURIComponent(query);
 
-    const response = await fetchWithTimeout(apiUrl, { headers: API_CONFIG.search.headers }, 30000);
+    const response = await fetchWithTimeout(apiUrl, { headers: API_CONFIG.search.headers });
     if (!response.ok) return;
 
     const data = await response.json();

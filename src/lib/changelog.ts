@@ -11,6 +11,20 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2.6.4",
+    date: "2025-08-30",
+    added: [
+      // 无新增内容
+    ],
+    changed: [
+    "优化搜索:调整超时时间(获取首页超时时间过长)"
+    ],
+    fixed: [
+    "修复播放缓存key不唯一",
+    "修复聚合结果不准确"
+    ]
+  },
+  {
     version: "2.6.1",
     date: "2025-08-29",
     added: [
