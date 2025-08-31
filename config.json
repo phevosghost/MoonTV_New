@@ -10,6 +10,14 @@
       "api": "http://cj.rycjapi.com/api.php/provide/vod",
       "name": "如意资源"
     },
+    "ruyi": {
+      "api": "https://raw.githubusercontent.com/trial/dp/master/json2/olevod.json",
+      "name": "欧乐影院"
+    },
+    "ruyi": {
+      "api": "http://apilj.com/api.php/provide/vod/",
+      "name": "成人资源"
+    },
     "bfzy": {
       "api": "https://bfzyapi.com/api.php/provide/vod",
       "name": "暴风资源"
@@ -81,4 +89,5 @@
       "name": "百度资源"
     }
   }
+
 }
