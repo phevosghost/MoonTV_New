@@ -12,7 +12,7 @@
     },    
     "chengren": {
       "api": "http://apilj.com/api.php/provide/vod/",
-      "name": "成人资源"
+      "name": "嘿嘿资源"
     },
     "bfzy": {
       "api": "https://bfzyapi.com/api.php/provide/vod",
@@ -87,5 +87,6 @@
   }
 
 }
+
 
 
