@@ -847,7 +847,7 @@ export const UserMenu: React.FC = () => {
                 默认流式搜索模式
               </h4>
               <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
-                关闭后默认使用一次性返回，空结果将不缓存
+                关闭后默认使用一次性返回，空结果均不缓存
               </p>
             </div>
             <label className='flex items-center cursor-pointer'>

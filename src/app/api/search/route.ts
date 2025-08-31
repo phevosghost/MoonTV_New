@@ -139,6 +139,7 @@ export async function GET(request: Request) {
   // -------------------------
   // 流式：并发
   // -------------------------
+  let hasAggregatedResults = false;
   (async () => {
     const aggregatedResults: any[] = [];
     const failedSources: { name: string; key: string; error: string }[] = [];
@@ -197,6 +198,9 @@ export async function GET(request: Request) {
     // 等所有 site 跑完
     await Promise.allSettled(tasks);
 
+    // 检查是否有聚合结果
+    hasAggregatedResults = aggregatedResults.length > 0;
+
     if (failedSources.length > 0) {
       await safeWrite({ failedSources });
     }
@@ -213,7 +217,13 @@ export async function GET(request: Request) {
   return new Response(readable, {
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
-      'Cache-Control': `private, max-age=${cacheTime}`,
+      'Cache-Control': hasAggregatedResults
+        ? `private, max-age=${cacheTime}`
+        : 'no-store, no-cache, must-revalidate',
+      ...(hasAggregatedResults ? {} : {
+        Pragma: 'no-cache',
+        Expires: '0',
+      }),
     },
   });
 }
