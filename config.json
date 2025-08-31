@@ -10,11 +10,11 @@
       "api": "http://cj.rycjapi.com/api.php/provide/vod",
       "name": "如意资源"
     },
-    "ruyi": {
+    "oule": {
       "api": "https://raw.githubusercontent.com/trial/dp/master/json2/olevod.json",
       "name": "欧乐影院"
     },
-    "ruyi": {
+    "chengren": {
       "api": "http://apilj.com/api.php/provide/vod/",
       "name": "成人资源"
     },
@@ -91,3 +91,4 @@
   }
 
 }
+
