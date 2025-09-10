@@ -14,17 +14,13 @@
       "api": "http://apilj.com/api.php/provide/vod/",
       "name": "嘿嘿资源"
     },
-    "dbkhw": {
-      "api": "https://raw.githubusercontent.com/trial/dp/master/json2/dbk.json",
-      "name": "独播库-海外"
-    },
-    "sdzy": {
-      "api": "http://sdzyapi.com/api.php/provide/vod",
-      "name": "闪电资源"
+    "sbkdy": {
+      "api": "https://91md.me/api.php/provide/vod",
+      "name": "萝莉社"
     },
     "sbkdy": {
-      "api": "https://baobei666.com/inc/apijson_vod.php",
-      "name": "随便看电影"
+      "api": "https://lbapi9.com/api.php/provide/vod",
+      "name": "福利姬"
     },
     "bfzy": {
       "api": "https://bfzyapi.com/api.php/provide/vod",
@@ -99,6 +95,7 @@
   }
 
 }
+
 
 
 
