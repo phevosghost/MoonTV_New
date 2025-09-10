@@ -14,11 +14,11 @@
       "api": "http://apilj.com/api.php/provide/vod/",
       "name": "嘿嘿资源"
     },
-    "sbkdy": {
+    "luolishe": {
       "api": "https://91md.me/api.php/provide/vod",
       "name": "萝莉社"
     },
-    "sbkdy": {
+    "fuliji": {
       "api": "https://lbapi9.com/api.php/provide/vod",
       "name": "福利姬"
     },
@@ -95,6 +95,7 @@
   }
 
 }
+
 
 
 
