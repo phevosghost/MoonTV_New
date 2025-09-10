@@ -14,6 +14,18 @@
       "api": "http://apilj.com/api.php/provide/vod/",
       "name": "嘿嘿资源"
     },
+    "dbkhw": {
+      "api": "https://raw.githubusercontent.com/trial/dp/master/json2/dbk.json",
+      "name": "独播库-海外"
+    },
+    "sdzy": {
+      "api": "http://sdzyapi.com/api.php/provide/vod",
+      "name": "闪电资源"
+    },
+    "sbkdy": {
+      "api": "https://baobei666.com/inc/apijson_vod.php",
+      "name": "随便看电影"
+    },
     "bfzy": {
       "api": "https://bfzyapi.com/api.php/provide/vod",
       "name": "暴风资源"
@@ -87,6 +99,7 @@
   }
 
 }
+
 
 
 
