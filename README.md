@@ -54,7 +54,7 @@
     - [Cloudflare 部署](#cloudflare-部署)
       - [普通部署（localstorage）](#普通部署localstorage-2)
       - [D1 支持](#d1-支持)
-    - [Docker 部署(目前版本仅为2.7.4)](#docker-部署目前版本仅为274)
+    - [Docker 部署](#docker-部署)
       - [直接运行（最简单，localstorage）](#直接运行最简单localstorage)
       - [Docker Compose](#docker-compose)
         - [local storage 存储](#local-storage-存储)
@@ -166,7 +166,7 @@
 4. 设置环境变量 NEXT_PUBLIC_STORAGE_TYPE，值为 **d1**；设置 USERNAME 和 PASSWORD 作为站长账号
 5. 重试部署
 
-### Docker 部署(目前版本仅为2.7.4)
+### Docker 部署
 
 #### 直接运行（最简单，localstorage）
 

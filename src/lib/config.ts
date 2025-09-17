@@ -140,7 +140,7 @@ async function initConfig() {
 
   if (process.env.DOCKER_ENV === 'true') {
     // eslint-disable-next-line @typescript-eslint/no-implied-eval
-    const _require = eval('require') as NodeRequire;
+    const _require = eval('require') as NodeJS.Require;
     const fs = _require('fs') as typeof import('fs');
     const path = _require('path') as typeof import('path');
 
@@ -512,7 +512,7 @@ export async function resetConfig() {
 
   if (process.env.DOCKER_ENV === 'true') {
     // eslint-disable-next-line @typescript-eslint/no-implied-eval
-    const _require = eval('require') as NodeRequire;
+    const _require = eval('require') as NodeJS.Require;
     const fs = _require('fs') as typeof import('fs');
     const path = _require('path') as typeof import('path');
 

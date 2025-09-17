@@ -16,6 +16,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import Swal from 'sweetalert2';
 
 import { getAuthInfoFromBrowserCookie } from '@/lib/auth';
 import { checkForUpdates, CURRENT_VERSION, UpdateStatus } from '@/lib/version';
@@ -891,6 +892,40 @@ export const UserMenu: React.FC = () => {
             </label>
           </div>
 
+          {/* 清除影片缓存 */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                清除影片播放缓存
+              </h4>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                删除本地localstorage存储中以 <code>search_cache_</code> 开头的缓存数据
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                Object.keys(localStorage).forEach(key => {
+                  if (key.startsWith("search_cache_")) {
+                    localStorage.removeItem(key);
+                  }
+                });
+                  // 显示清除成功提示
+                  Swal.fire({
+                    icon: 'success',
+                    title: '清除成功',
+                    text: '再清理浏览数据可彻底清除',
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 2000,
+                    timerProgressBar: true,
+                  });
+              }}
+              className="px-3 py-1 text-sm bg-red-500 hover:bg-red-600 text-white rounded-md transition-colors"
+            >
+              清除
+            </button>
+          </div>
         </div>
 
         {/* 底部说明 */}
