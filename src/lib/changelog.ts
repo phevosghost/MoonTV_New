@@ -11,6 +11,24 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2.9.1",
+    date: "2025-09-19",
+    added: [
+      // 无新增内容
+    ],
+    changed: [
+    "搜索栏左侧源配置获取采用缓存",
+    "优化搜索结果的筛选组件UI",
+    "搜索结果区分为包含与不包含搜索词的结果",
+    "删除播放存储无用缓存的逻辑",
+    "开放分类配置中的添加分类"
+    ],
+    fixed: [
+    "缓存失效时播放加载源不一致",
+    "修复d1数据库管理配置保存报错"
+    ]
+  },
+  {
     version: "2.8.4",
     date: "2025-09-14",
     added: [

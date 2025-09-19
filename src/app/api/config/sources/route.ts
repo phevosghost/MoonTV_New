@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': `public, max-age=${cacheTime}`, // 使用配置的缓存时间
+        'Cache-Control': `public, max-age=${cacheTime}, s-maxage=0`, // 使用配置的缓存时间
       },
     });
   } catch (error) {

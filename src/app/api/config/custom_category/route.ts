@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   
   return NextResponse.json(config.CustomCategories, {
     headers: {
-      'Cache-Control': `public, max-age=${cacheTime}`,
+      'Cache-Control': `public, max-age=${cacheTime}, s-maxage=0`,
     },
   });
 }
