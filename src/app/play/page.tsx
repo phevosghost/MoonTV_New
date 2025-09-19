@@ -660,15 +660,6 @@ function PlayPageClient() {
         setSourceSearchLoading(false);
       }
     };
-
-    const CACHE_KEY_PREFIX = 'search_cache_';
-    const CACHE_TTL = 1000 * 60 * 180; // 缓存 180 分钟
-    
-    interface CachedResult {
-      timestamp: number;
-      reSearch: boolean;
-      results: SearchResult[];
-    }
     
     const fetchSourcesData = async (
       query: string,
@@ -676,139 +667,80 @@ function PlayPageClient() {
     ): Promise<SearchResult[]> => {
       setSourceSearchLoading(true);
       setSourceSearchError('');
-
-      // 清理过期缓存
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith(CACHE_KEY_PREFIX)) {
-          const cachedItem = localStorage.getItem(key);
-          if (cachedItem) {
-            try {
-              const parsedItem = JSON.parse(cachedItem) as CachedResult;
-              if (Date.now() - parsedItem.timestamp >= CACHE_TTL) {
-                localStorage.removeItem(key); // 删除过期缓存
-              }
-            } catch (e) {
-              // 如果解析失败也删除
-              localStorage.removeItem(key);
-            }
-          }
-        }
-      }
     
-      // 生成更唯一的缓存键，避免影片名字相同时的缓存冲突
-      const cacheKey = `${CACHE_KEY_PREFIX}${query.trim().toLowerCase()}_${videoYearRef.current || ''}_${searchType || ''}`;
-      let aggregatedResults: SearchResult[] = [];
+      const aggregatedResults: SearchResult[] = [];
     
-      // 提前声明
-      let parsed: CachedResult | null = null;
-    
-      try {
-        // 1. 读取缓存
-        const cached = localStorage.getItem(cacheKey);
-    
-        if (cached) {
-          parsed = JSON.parse(cached) as CachedResult;
-          aggregatedResults = [...parsed.results];
-          setAvailableSources(aggregatedResults);
-          setSourceSearchLoading(false);
-          onResult?.(parsed.results);
-        }
-    
-        // 2. 发起流式搜索请求
-        if (!parsed || parsed.reSearch) {
-          const timeoutSeconds = getRequestTimeout();
-          const response = await fetch(
-            `/api/search?q=${encodeURIComponent(query.trim())}&timeout=${timeoutSeconds}`
-          );
-          if (!response.ok) throw new Error('搜索失败');
-    
-          const reader: ReadableStreamDefaultReader<Uint8Array> | undefined =
-            response.body?.getReader();
-          if (!reader) throw new Error('无法读取搜索流');
-    
-          const decoder = new TextDecoder();
-          let buffer = '';
-          let done = false;
-    
-          while (!done) {
-            const { value, done: readerDone } = await reader.read();
-            done = readerDone;
-    
-            if (value) {
-              buffer += decoder.decode(value, { stream: true });
-              const lines: string[] = buffer.split('\n');
-              buffer = lines.pop() || '';
-    
-              for (const line of lines) {
-                if (!line.trim()) continue;
-    
-                try {
-                  const data = JSON.parse(line) as { pageResults?: SearchResult[] };
-                  if (data.pageResults) {
-                    const filteredResults: SearchResult[] = data.pageResults.filter(
-                      (r: SearchResult) => {
-                        const titleMatch =
-                          r.title.trim().replace(/\s+/g, ' ').toLowerCase() ===
-                          videoTitleRef.current.trim().replace(/\s+/g, ' ').toLowerCase();
-                        const yearMatch = videoYearRef.current
-                          ? r.year.toLowerCase() ===
-                            videoYearRef.current.toLowerCase()
-                          : true;
-                        const typeMatch = searchType
-                          ? (searchType === 'tv' && r.episodes.length > 1) ||
-                            (searchType === 'movie' && r.episodes.length === 1)
-                          : true;
-                        return titleMatch && yearMatch && typeMatch;
-                      }
+      try {    
+        // 发起流式搜索请求
+        const timeoutSeconds = getRequestTimeout();
+        const response = await fetch(
+          `/api/search?q=${encodeURIComponent(query.trim())}&timeout=${timeoutSeconds}`
+        );
+        if (!response.ok) throw new Error('搜索失败');
+  
+        const reader: ReadableStreamDefaultReader<Uint8Array> | undefined =
+          response.body?.getReader();
+        if (!reader) throw new Error('无法读取搜索流');
+  
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let done = false;
+  
+        while (!done) {
+          const { value, done: readerDone } = await reader.read();
+          done = readerDone;
+  
+          if (value) {
+            buffer += decoder.decode(value, { stream: true });
+            const lines: string[] = buffer.split('\n');
+            buffer = lines.pop() || '';
+  
+            for (const line of lines) {
+              if (!line.trim()) continue;
+  
+              try {
+                const data = JSON.parse(line) as { pageResults?: SearchResult[] };
+                if (data.pageResults) {
+                  const filteredResults: SearchResult[] = data.pageResults.filter(
+                    (r: SearchResult) => {
+                      const titleMatch =
+                        r.title.trim().replace(/\s+/g, ' ').toLowerCase() ===
+                        videoTitleRef.current.trim().replace(/\s+/g, ' ').toLowerCase();
+                      const yearMatch = videoYearRef.current
+                        ? r.year.toLowerCase() ===
+                          videoYearRef.current.toLowerCase()
+                        : true;
+                      const typeMatch = searchType
+                        ? (searchType === 'tv' && r.episodes.length > 1) ||
+                          (searchType === 'movie' && r.episodes.length === 1)
+                        : true;
+                      return titleMatch && yearMatch && typeMatch;
+                    }
+                  );
+  
+                  if (filteredResults.length > 0) {
+                    const newOnes = filteredResults.filter(
+                      (r) =>
+                        !aggregatedResults.some(
+                          (item) => item.source === r.source && item.id === r.id
+                        )
                     );
-    
-                    if (filteredResults.length > 0) {
-                      const newOnes = filteredResults.filter(
-                        (r) =>
-                          !aggregatedResults.some(
-                            (item) => item.source === r.source && item.id === r.id
-                          )
-                      );
-    
-                      if (newOnes.length > 0) {
-                        aggregatedResults.push(...newOnes);
-                        setAvailableSources([...aggregatedResults]);
-                        setSourceSearchLoading(false);
-                        onResult?.(newOnes);
-    
-                        // 每次新增就更新缓存
-                        parsed = {
-                          timestamp: Date.now(),
-                          reSearch: true,
-                          results: aggregatedResults,
-                        };
-                        localStorage.setItem(cacheKey, JSON.stringify(parsed));
-                      }
+  
+                    if (newOnes.length > 0) {
+                      aggregatedResults.push(...newOnes);
+                      setAvailableSources([...aggregatedResults]);
+                      setSourceSearchLoading(false);
+                      onResult?.(newOnes);
                     }
                   }
-                } catch (err) {
-                  console.warn('解析行 JSON 失败:', err);
                 }
+              } catch (err) {
+                console.warn('解析行 JSON 失败:', err);
               }
             }
           }
-        } else {
-          setSourceSearchLoading(false);
-          return aggregatedResults;
         }
-    
         setSourceSearchLoading(false);
-    
-        // 最终缓存结果 - 只有当有结果时才缓存
-        if (aggregatedResults.length > 0) {
-          parsed = {
-            timestamp: Date.now(),
-            reSearch: false,
-            results: aggregatedResults,
-          };
-          localStorage.setItem(cacheKey, JSON.stringify(parsed));
-        }
     
         return aggregatedResults;
       } catch (err) {
@@ -818,7 +750,35 @@ function PlayPageClient() {
       }
     };
     
+    /**
+      * 初始化播放数据
+      */
+    function initDetail(detailData: SearchResult) {
+      setCurrentSource(detailData.source);
+      setCurrentId(detailData.id);
+      setVideoYear(detailData.year);
+      setVideoTitle(detailData.title || videoTitleRef.current);
+      setVideoCover(detailData.poster);
+      setVideoDoubanId(detailData.douban_id || 0);
+      setDetail(detailData);
     
+      if (currentEpisodeIndex >= detailData.episodes.length) {
+        setCurrentEpisodeIndex(0);
+      }
+    
+      // 规范 URL 参数
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.set('source', detailData.source);
+      newUrl.searchParams.set('id', detailData.id);
+      newUrl.searchParams.set('year', detailData.year);
+      newUrl.searchParams.set('title', detailData.title);
+      newUrl.searchParams.delete('prefer');
+      window.history.replaceState({}, '', newUrl.toString());
+    
+      setLoadingStage('ready');
+      setLoadingMessage('✨ 准备就绪，即将开始播放...');
+      setTimeout(() => setLoading(false), 500);
+    }
 
     const initAll = async () => {
       if (!currentSource && !currentId && !videoTitle && !searchTitle) {
@@ -834,63 +794,36 @@ function PlayPageClient() {
           ? '🎬 正在获取视频详情...'
           : '🔍 正在搜索播放源...'
       );
-    
-      let started = false; // 是否已经开始播放
-    
-      const results = await fetchSourcesData(videoTitle, (newResults) => {
-        if (!started && newResults.length > 0) {
-          started = true;
-
-          let detailData = null;
-          // 从缓存中读取当前源和 ID
-          const cachedSource = localStorage.getItem('currentSource');
-          const cachedId = localStorage.getItem('currentId');
-
-          // 如果缓存存在，就优先找这个源
-          if (cachedSource && cachedId) {
-            detailData = newResults.find(
-              (item) => item.source === cachedSource && item.id === cachedId
-            ) || null;
+      let detailData: SearchResult | null = null;
+      let allResults: SearchResult[] = [];
+      
+      await fetchSourcesData(videoTitle, (newResults) => {
+        allResults = [...allResults, ...newResults];
+      
+        // 如果还没确定 detailData，就尝试找目标源
+        if (!detailData && currentSource && currentId) {
+          const match = newResults.find(
+            (item) => item.source === currentSource && item.id === currentId
+          );
+          if (match) {
+            detailData = match;
+            initDetail(detailData);
           }
-
-          // 如果没找到，就退回到第一个源
-          if (!detailData) {
-            detailData = newResults[0];
-          }
-    
-          setCurrentSource(detailData.source);
-          setCurrentId(detailData.id);
-          setVideoYear(detailData.year);
-          setVideoTitle(detailData.title || videoTitleRef.current);
-          setVideoCover(detailData.poster);
-          setVideoDoubanId(detailData.douban_id || 0);
-          setDetail(detailData);
-    
-          if (currentEpisodeIndex >= detailData.episodes.length) {
-            setCurrentEpisodeIndex(0);
-          }
-    
-          // 规范URL参数
-          const newUrl = new URL(window.location.href);
-          newUrl.searchParams.set('source', detailData.source);
-          newUrl.searchParams.set('id', detailData.id);
-          newUrl.searchParams.set('year', detailData.year);
-          newUrl.searchParams.set('title', detailData.title);
-          newUrl.searchParams.delete('prefer');
-          window.history.replaceState({}, '', newUrl.toString());
-    
-          setLoadingStage('ready');
-          setLoadingMessage('✨ 准备就绪，即将开始播放...');
-          setTimeout(() => setLoading(false), 500);
         }
       });
-
-      // 如果没有找到匹配结果，设置错误状态
-      if (!started && results.length === 0) {
+      
+      // 流式搜索结束：如果目标源没找到，就 fallback
+      if (!detailData && allResults.length > 0) {
+        detailData = allResults[0];
+        initDetail(detailData);
+      }
+      
+      // 完全没结果
+      if (!detailData) {
         setError('未找到匹配结果');
         setLoading(false);
       }
-    };    
+    }
     
     initAll();
     
@@ -953,9 +886,6 @@ function PlayPageClient() {
     newTitle: string
   ) => {
     try {
-      // 保存当前源和 ID 到缓存
-      localStorage.setItem('currentSource', newSource);
-      localStorage.setItem('currentId', newId);
       // 显示换源加载状态
       setVideoLoadingStage('sourceChanging');
       setIsVideoLoading(true);
