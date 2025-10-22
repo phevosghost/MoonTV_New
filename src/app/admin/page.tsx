@@ -26,6 +26,7 @@ import {
   Check,
   ChevronDown,
   ChevronUp,
+  Database,
   ExternalLink,
   FileText,
   FolderOpen,
@@ -40,6 +41,7 @@ import Swal from 'sweetalert2';
 import { AdminConfig, AdminConfigResult } from '@/lib/admin.types';
 import { getAuthInfoFromBrowserCookie } from '@/lib/auth';
 
+import DataMigration from '@/components/DataMigration';
 import PageLayout from '@/components/PageLayout';
 
 // 统一弹窗方法（必须在首次使用前定义）
@@ -285,8 +287,9 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
 
     const { value, isConfirmed } = await Swal.fire({
       title: '新建分组',
+      width: '800px',
       html:
-        '<input id="swal-input-group-name" class="swal2-input" placeholder="分组名称" />' +
+        '<input id="swal-input-group-name" class="swal2-input" placeholder="分组名称" style="width: 100%; max-width: 400px; margin: 0 auto;" />' +
         '<div style="text-align:left;margin-top:6px;font-size:12px;opacity:.8;display:flex;align-items:center;gap:10px">' +
         '<span>选择该分组可使用的视频源</span>' +
         '<label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:12px">' +
@@ -585,8 +588,9 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
 
     const { value, isConfirmed } = await Swal.fire({
       title: '编辑分组',
+      width: '800px',
       html:
-        `<input id="swal-edit-group-name" class="swal2-input" placeholder="分组名称" value="${groupName}" />` +
+        `<input id="swal-edit-group-name" class="swal2-input" placeholder="分组名称" value="${groupName}" style="width: 100%; max-width: 400px; margin: 0 auto;" />` +
         '<div style="text-align:left;margin-top:6px;font-size:12px;opacity:.8;display:flex;align-items:center;gap:10px">' +
         '<span>设置该分组可使用的视频源</span>' +
         '<label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:12px">' +
@@ -1496,38 +1500,38 @@ const VideoSourceConfig = ({
 
       {/* 视频源表格 */}
       <div className='border border-gray-200 dark:border-gray-700 rounded-lg max-h-[28rem] overflow-y-auto overflow-x-auto'>
-        <table className='min-w-full divide-y divide-gray-200 dark:divide-gray-700'>
-          <thead className='bg-gray-50 dark:bg-gray-900'>
-            <tr>
-              <th className='w-8' />
-              <th className='w-8' />
-              <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
-                名称
-              </th>
-              <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
-                Key
-              </th>
-              <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
-                API 地址
-              </th>
-              <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
-                Detail 地址
-              </th>
-              <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
-                状态
-              </th>
-              <th className='px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
-                操作
-              </th>
-            </tr>
-          </thead>
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-            autoScroll={false}
-            modifiers={[restrictToVerticalAxis, restrictToParentElement]}
-          >
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+          autoScroll={false}
+          modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+        >
+          <table className='min-w-full divide-y divide-gray-200 dark:divide-gray-700'>
+            <thead className='bg-gray-50 dark:bg-gray-900'>
+              <tr>
+                <th className='w-8' />
+                <th className='w-8' />
+                <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
+                  名称
+                </th>
+                <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
+                  Key
+                </th>
+                <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
+                  API 地址
+                </th>
+                <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
+                  Detail 地址
+                </th>
+                <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
+                  状态
+                </th>
+                <th className='px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
+                  操作
+                </th>
+              </tr>
+            </thead>
             <SortableContext
               items={sources.map((s) => s.key)}
               strategy={verticalListSortingStrategy}
@@ -1538,8 +1542,8 @@ const VideoSourceConfig = ({
                 ))}
               </tbody>
             </SortableContext>
-          </DndContext>
-        </table>
+          </table>
+        </DndContext>
       </div>
 
       {/* 保存排序按钮 */}
@@ -1838,34 +1842,34 @@ const CategoryConfig = ({
 
       {/* 分类表格 */}
       <div className='border border-gray-200 dark:border-gray-700 rounded-lg max-h-[28rem] overflow-y-auto overflow-x-auto'>
-        <table className='min-w-full divide-y divide-gray-200 dark:divide-gray-700'>
-          <thead className='bg-gray-50 dark:bg-gray-900'>
-            <tr>
-              <th className='w-8' />
-              <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
-                分类名称
-              </th>
-              <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
-                类型
-              </th>
-              <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
-                搜索关键词
-              </th>
-              <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
-                状态
-              </th>
-              <th className='px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
-                操作
-              </th>
-            </tr>
-          </thead>
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-            autoScroll={false}
-            modifiers={[restrictToVerticalAxis, restrictToParentElement]}
-          >
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+          autoScroll={false}
+          modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+        >
+          <table className='min-w-full divide-y divide-gray-200 dark:divide-gray-700'>
+            <thead className='bg-gray-50 dark:bg-gray-900'>
+              <tr>
+                <th className='w-8' />
+                <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
+                  分类名称
+                </th>
+                <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
+                  类型
+                </th>
+                <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
+                  搜索关键词
+                </th>
+                <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
+                  状态
+                </th>
+                <th className='px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
+                  操作
+                </th>
+              </tr>
+            </thead>
             <SortableContext
               items={categories.map((c) => `${c.query}:${c.type}`)}
               strategy={verticalListSortingStrategy}
@@ -1879,8 +1883,8 @@ const CategoryConfig = ({
                 ))}
               </tbody>
             </SortableContext>
-          </DndContext>
-        </table>
+          </table>
+        </DndContext>
       </div>
 
       {/* 保存排序按钮 */}
@@ -2941,6 +2945,23 @@ function AdminPageClient() {
             >
               <CategoryConfig config={config} refreshConfig={fetchConfig} />
             </CollapsibleTab>
+
+            {/* 数据迁移标签 - 仅站长可见 */}
+            {role === 'owner' && (
+              <CollapsibleTab
+                title='数据迁移'
+                icon={
+                  <Database
+                    size={20}
+                    className='text-gray-600 dark:text-gray-400'
+                  />
+                }
+                isExpanded={expandedTabs.dataMigration}
+                onToggle={() => toggleTab('dataMigration')}
+              >
+                <DataMigration onRefreshConfig={fetchConfig} />
+              </CollapsibleTab>
+            )}
           </div>
         </div>
       </div>
