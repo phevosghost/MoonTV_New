@@ -201,10 +201,24 @@ export async function getDetailFromApi(
   apiSite: ApiSite,
   id: string
 ): Promise<SearchResult> {
-  if (apiSite.detail) {
-    return handleSpecialSourceDetail(id, apiSite);
+  try {
+    const jsonDetail = await getJsonDetailFromApi(apiSite, id);
+    if (!apiSite.detail || jsonDetail.episodes.length > 0) {
+      return jsonDetail;
+    }
+  } catch (error) {
+    if (!apiSite.detail) {
+      throw error;
+    }
   }
 
+  return handleSpecialSourceDetail(id, apiSite);
+}
+
+async function getJsonDetailFromApi(
+  apiSite: ApiSite,
+  id: string
+): Promise<SearchResult> {
   const detailUrl = `${apiSite.api}${API_CONFIG.detail.path}${id}`;
 
   const controller = new AbortController();

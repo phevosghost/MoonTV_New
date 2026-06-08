@@ -3,6 +3,7 @@
 import { db } from '@/lib/db';
 
 import { AdminConfig } from './admin.types';
+import defaultConfigFile from '../../config.json';
 
 export interface ApiSite {
   key: string;
@@ -56,6 +57,13 @@ export const API_CONFIG = {
 // 在模块加载时根据环境决定配置来源
 let cachedConfig: AdminConfig;
 
+function getDefaultConfigFile(): string {
+  return JSON.stringify(defaultConfigFile);
+}
+
+function shouldUseServerStorage(): boolean {
+  return (process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage') !== 'localstorage';
+}
 
 // 从配置文件补充管理员配置
 export function refineConfig(adminConfig: AdminConfig): AdminConfig {
@@ -230,10 +238,12 @@ async function getInitConfig(configFile: string, subConfig: {
 
   // 补充用户信息
   let userNames: string[] = [];
-  try {
-    userNames = await db.getAllUsers();
-  } catch (e) {
-    console.error('获取用户列表失败:', e);
+  if (shouldUseServerStorage()) {
+    try {
+      userNames = await db.getAllUsers();
+    } catch (e) {
+      console.error('获取用户列表失败:', e);
+    }
   }
   const allUsers = userNames.filter((u) => u !== process.env.USERNAME).map((u) => ({
     username: u,
@@ -298,19 +308,23 @@ export async function getConfig(): Promise<AdminConfig> {
 
   // 读 db
   let adminConfig: AdminConfig | null = null;
-  try {
-    adminConfig = await db.getAdminConfig();
-  } catch (e) {
-    console.error('获取管理员配置失败:', e);
+  if (shouldUseServerStorage()) {
+    try {
+      adminConfig = await db.getAdminConfig();
+    } catch (e) {
+      console.error('获取管理员配置失败:', e);
+    }
   }
 
   // db 中无配置，执行一次初始化
   if (!adminConfig) {
-    adminConfig = await getInitConfig("");
+    adminConfig = await getInitConfig(getDefaultConfigFile());
   }
   adminConfig = configSelfCheck(adminConfig);
   cachedConfig = adminConfig;
-  db.saveAdminConfig(cachedConfig);
+  if (shouldUseServerStorage()) {
+    await db.saveAdminConfig(cachedConfig);
+  }
   return cachedConfig;
 }
 
@@ -397,17 +411,24 @@ export function configSelfCheck(adminConfig: AdminConfig): AdminConfig {
 
 export async function resetConfig() {
   let originConfig: AdminConfig | null = null;
-  try {
-    originConfig = await db.getAdminConfig();
-  } catch (e) {
-    console.error('获取管理员配置失败:', e);
+  if (shouldUseServerStorage()) {
+    try {
+      originConfig = await db.getAdminConfig();
+    } catch (e) {
+      console.error('获取管理员配置失败:', e);
+    }
   }
   if (!originConfig) {
     originConfig = {} as AdminConfig;
   }
-  const adminConfig = await getInitConfig(originConfig.ConfigFile, originConfig.ConfigSubscribtion);
+  const adminConfig = await getInitConfig(
+    originConfig.ConfigFile || getDefaultConfigFile(),
+    originConfig.ConfigSubscribtion
+  );
   cachedConfig = adminConfig;
-  await db.saveAdminConfig(adminConfig);
+  if (shouldUseServerStorage()) {
+    await db.saveAdminConfig(adminConfig);
+  }
 
   return;
 }

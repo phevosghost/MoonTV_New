@@ -14,8 +14,14 @@ export function getAuthInfoFromCookie(request: NextRequest): {
   }
 
   try {
-    const decoded = decodeURIComponent(authCookie.value);
+    let decoded = decodeURIComponent(authCookie.value);
+    if (decoded.includes('%')) {
+      decoded = decodeURIComponent(decoded);
+    }
     const authData = JSON.parse(decoded);
+    if (!authData.username) {
+      authData.username = process.env.USERNAME || 'localstorage';
+    }
     return authData;
   } catch (error) {
     return null;
