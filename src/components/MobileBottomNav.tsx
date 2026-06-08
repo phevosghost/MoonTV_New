@@ -2,7 +2,7 @@
 
 'use client';
 
-import { Cat, Clover, Film, Home, Search, Star, Tv } from 'lucide-react';
+import { Cat, Clover, Film, Home, Radio, Search, Star, Tv } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -28,6 +28,7 @@ const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
   const [navItems, setNavItems] = useState([
     { icon: Home, label: '首页', href: '/' },
     { icon: Search, label: '搜索', href: '/search' },
+    { icon: Radio, label: '直播', href: '/live' },
     {
       icon: Film,
       label: '电影',
@@ -128,7 +129,7 @@ const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
               <Link
                 href={item.href}
                 className='flex flex-col items-center justify-center w-full h-14 gap-1 text-xs'
-                onClick={(e) => {
+                onClick={() => {
                   // 如果不是当前激活的链接，则触发加载动画
                   if (!active) {
                     startLoading();

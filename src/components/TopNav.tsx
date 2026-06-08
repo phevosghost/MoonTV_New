@@ -2,7 +2,7 @@
 
 'use client';
 
-import { Cat, Clover, Film, History, Home, Search, Star, Trash2, Tv, X } from 'lucide-react';
+import { Cat, Clover, Film, History, Home, Radio, Search, Star, Trash2, Tv, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
@@ -99,6 +99,11 @@ const TopNav = ({ activePath = '/' }: TopNavProps) => {
   }, [pathname, searchParams]);
 
   const [menuItems, setMenuItems] = useState([
+    {
+      icon: Radio,
+      label: '直播',
+      href: '/live',
+    },
     {
       icon: Film,
       label: '电影',
@@ -426,4 +431,3 @@ const TopNav = ({ activePath = '/' }: TopNavProps) => {
 };
 
 export default TopNav;
-
