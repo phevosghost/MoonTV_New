@@ -1,12 +1,10 @@
-# MoonTV(Branch)
-
-原项目地址https://github.com/MoonTechLab/LunaTV
+# MoonTV
 
 <div align="center">
-  <img src="public/logo.png" alt="LibreTV Logo" width="120">
+  <img src="public/logo.png" alt="MoonTV Logo" width="120">
 </div>
 
-> 🎬 **MoonTV** 是一个开箱即用的、跨平台的影视聚合播放器。它基于 **Next.js 14** + **Tailwind&nbsp;CSS** + **TypeScript** 构建，支持多资源搜索、在线播放、收藏同步、播放记录、本地/云端存储，让你可以随时随地畅享海量免费影视内容。
+> 🎬 **MoonTV** 是一个开箱即用的、跨平台的影视聚合播放器。它基于 **Next.js 14** + **Tailwind&nbsp;CSS** + **TypeScript** 构建，支持多资源搜索、在线播放、收藏同步、播放记录、云端存储，让你可以随时随地畅享海量免费影视内容。
 
 <div align="center">
 
@@ -22,55 +20,41 @@
 
 ## ✨ 功能特性
 
-- 🔍 **多源聚合搜索**：快速返回结果。
+- 🔍 **多源聚合搜索**：一次搜索立刻返回全源结果。
 - 📄 **丰富详情页**：支持剧集列表、演员、年份、简介等完整信息展示。
 - ▶️ **流畅在线播放**：集成 HLS.js & ArtPlayer。
-- ❤️ **收藏 + 继续观看**：支持 Redis/Upstash 存储，多端同步进度。
+- ❤️ **收藏 + 继续观看**：支持 Kvrocks/Redis/Upstash 存储，多端同步进度。
 - 📱 **PWA**：离线缓存、安装到桌面/主屏，移动端原生体验。
 - 🌗 **响应式布局**：桌面侧边栏 + 移动底部导航，自适应各种屏幕尺寸。
-- 🚀 **极简部署**：一条 Docker 命令即可将完整服务跑起来，或免费部署到 Vercel、Netlify、cloudflare。
-- 👿 **智能去广告**：自动跳过视频中的切片广告（实验性）
-- 💬 **弹幕支持**：以[danmu_api](https://github.com/huangxd-/danmu_api)为后端
+- 👿 **智能去广告**：自动跳过视频中的切片广告（实验性）。
+
+### 注意：部署后项目为空壳项目，无内置播放源和直播源，需要自行收集
 
 <details>
   <summary>点击查看项目截图</summary>
   <img src="public/screenshot1.png" alt="项目截图" style="max-width:600px">
+  <img src="public/screenshot2.png" alt="项目截图" style="max-width:600px">
+  <img src="public/screenshot3.png" alt="项目截图" style="max-width:600px">
 </details>
+
+### 请不要在 B站、小红书、微信公众号、抖音、今日头条或其他中国大陆社交平台发布视频或文章宣传本项目，不授权任何“科技周刊/月刊”类项目或站点收录本项目。
 
 ## 🗺 目录
 
-- [MoonTV(Branch)](#moontvbranch)
-  - [✨ 功能特性](#-功能特性)
-  - [🗺 目录](#-目录)
-  - [技术栈](#技术栈)
-  - [部署](#部署)
-    - [Vercel 部署](#vercel-部署)
-      - [普通部署（localstorage）](#普通部署localstorage)
-      - [Upstash Redis 支持](#upstash-redis-支持)
-    - [Netlify 部署(推荐)](#netlify-部署推荐)
-      - [普通部署（localstorage）](#普通部署localstorage-1)
-      - [Upstash Redis 支持](#upstash-redis-支持-1)
-    - [Cloudflare 部署](#cloudflare-部署)
-      - [普通部署（localstorage）](#普通部署localstorage-2)
-      - [D1 支持](#d1-支持)
-    - [Docker 部署](#docker-部署)
-      - [直接运行（最简单，localstorage）](#直接运行最简单localstorage)
-      - [Docker Compose](#docker-compose)
-        - [local storage 存储](#local-storage-存储)
-        - [Upstash 存储](#upstash-存储)
-  - [环境变量](#环境变量)
-  - [配置说明](#配置说明)
-  - [管理员配置](#管理员配置)
-  - [AndroidTV 使用](#androidtv-使用)
-  - [TVBox 对接](#tvbox-对接)
-  - [Selene 使用](#selene-使用)
-  - [Roadmap](#roadmap)
-  - [安全与隐私提醒](#安全与隐私提醒)
-    - [请设置密码保护并关闭公网注册](#请设置密码保护并关闭公网注册)
-    - [部署要求](#部署要求)
-    - [重要声明](#重要声明)
-  - [License](#license)
-  - [致谢](#致谢)
+- [技术栈](#技术栈)
+- [部署](#部署)
+  - [一键部署](#zeabur-一键部署)
+  - [Docker 部署](#Kvrocks-存储推荐)
+- [配置文件](#配置文件)
+- [订阅](#订阅)
+- [自动更新](#自动更新)
+- [环境变量](#环境变量)
+- [客户端](#客户端)
+- [AndroidTV 使用](#AndroidTV-使用)
+- [Roadmap](#roadmap)
+- [安全与隐私提醒](#安全与隐私提醒)
+- [License](#license)
+- [致谢](#致谢)
 
 ## 技术栈
 
@@ -81,129 +65,103 @@
 | 语言      | TypeScript 4                                                                                          |
 | 播放器    | [ArtPlayer](https://github.com/zhw2590582/ArtPlayer) · [HLS.js](https://github.com/video-dev/hls.js/) |
 | 代码质量  | ESLint · Prettier · Jest                                                                              |
-| 部署      | Docker · Vercel · pages                                                                               |
+| 部署      | Docker                                                                    |
 
 ## 部署
 
-本项目**支持 Vercel、Docker、Netlify、Cloudflare** 部署。
+本项目**仅支持 Docker 或其他基于 Docker 的平台** 部署。
 
-存储支持矩阵
+### zeabur 一键部署
 
-|               | Docker | Vercel | Netlify | Cloudflare |
-| :-----------: | :----: | :----: | :-----: | :--------: |
-| localstorage  |   ✅   |   ✅   |   ✅    |     ✅     |
-|  原生 redis   |   ✅   |        |         |            |
-| Cloudflare D1 |        |        |         |     ✅     |
-| Upstash Redis |   ☑️   |   ✅   |   ✅    |     ✅     |
+点击下方按钮即可一键部署，自动配置 LunaTV + Kvrocks 数据库：
 
-✅：经测试支持
+[![Deploy on Zeabur](https://zeabur.com/button.svg)](https://zeabur.com/templates/8MPTQU/deploy)
 
-☑️：理论上支持，未测试
+**优势**：
+- ✅ 无需配置，一键启动（自动部署完整环境）
+- ✅ 自动 HTTPS 和全球 CDN 加速
+- ✅ 持久化存储，数据永不丢失
+- ✅ 免费额度足够个人使用
 
-### Vercel 部署
+**⚠️ 重要提示**：部署完成后，需要在 Zeabur 中为 LunaTV 服务设置访问域名（Domain）才能在浏览器中访问。详见下方 [设置访问域名](#5-设置访问域名必须) 步骤。
 
-#### 普通部署（localstorage）
+### Kvrocks 存储（推荐）
 
-1. **Fork** 本仓库到你的 GitHub 账户。
-2. 登陆 [Vercel](https://vercel.com/)，点击 **Add New → Project**，选择 Fork 后的仓库。
-3. 设置 PASSWORD 环境变量。
-4. 保持默认设置完成首次部署。
-5. 如需自定义 `config.json`，请直接修改 Fork 后仓库中该文件。
-6. 每次 Push 到 `main` 分支将自动触发重新构建。
-
-部署完成后即可通过分配的域名访问，也可以绑定自定义域名。
-
-#### Upstash Redis 支持
-
-0. 完成普通部署并成功访问。
-1. 在 [upstash](https://upstash.com/) 注册账号并新建一个 Redis 实例，名称任意。
-2. 复制新数据库的 **HTTPS ENDPOINT 和 TOKEN**
-3. 返回你的 Vercel 项目，新增环境变量 **UPSTASH_URL 和 UPSTASH_TOKEN**，值为第二步复制的 endpoint 和 token
-4. 设置环境变量 NEXT_PUBLIC_STORAGE_TYPE，值为 **upstash**；设置 USERNAME 和 PASSWORD 作为站长账号
-5. 重试部署
-
-### Netlify 部署(推荐)
-
-#### 普通部署（localstorage）
-
-1. **Fork** 本仓库到你的 GitHub 账户。
-2. 登陆 [Netlify](https://www.netlify.com/)，点击 **Add New project → Importing an existing project**，授权 Github，选择 Fork 后的仓库。
-3. 设置 PASSWORD 环境变量。
-4. 保持默认设置完成首次部署。
-5. 每次 Push 到 `main` 分支将自动触发重新构建。
-
-部署完成后即可通过分配的域名访问，也可以绑定自定义域名。
-
-#### Upstash Redis 支持
-
-0. 完成普通部署并成功访问。
-1. 在 [upstash](https://upstash.com/) 注册账号并新建一个 Redis 实例，名称任意。
-2. 复制新数据库的 **HTTPS ENDPOINT 和 TOKEN**
-3. 返回你的 Netlify 项目，**Project Configuration → Environment variables** 新增环境变量 **UPSTASH_URL 和 UPSTASH_TOKEN**，值为第二步复制的 endpoint 和 token
-4. 设置环境变量 NEXT_PUBLIC_STORAGE_TYPE，值为 **upstash**；设置 USERNAME 和 PASSWORD 作为站长账号
-5. 重试部署
-
-### Cloudflare 部署
-
-**Cloudflare Pages 的环境变量尽量设置为密钥而非文本**
-
-#### 普通部署（localstorage）
-
-1. **Fork** 本仓库到你的 GitHub 账户。
-2. 登陆 [Cloudflare](https://cloudflare.com)，点击 **计算（Workers）-> Workers 和 Pages**，点击创建
-3. 选择 Pages，导入现有的 Git 存储库，选择 Fork 后的仓库
-4. 构建命令填写 **pnpm run pages:build**，预设框架为无，**构建输出目录**为 `.vercel/output/static`
-5. 保持默认设置完成首次部署。进入设置，将兼容性标志设置为 `nodejs_compat`，无需选择，直接粘贴
-6. 首次部署完成后进入设置，新增 PASSWORD 密钥（变量和机密下），而后重试部署。
-7. 如需自定义 `config.json`，请直接修改 Fork 后仓库中该文件。
-8. 每次 Push 到 `main` 分支将自动触发重新构建。
-
-#### D1 支持
-
-0. 完成普通部署并成功访问
-1. 点击 **存储和数据库 -> D1 SQL 数据库**，创建一个新的数据库，名称随意
-2. 进入刚创建的数据库，点击左上角的 Explore Data，将[d1-init](d1-init.sql) 中的内容粘贴到 Query 窗口后点击 **Run All**，等待运行完成
-3. 返回你的 pages 项目，进入 **设置 -> 绑定**，添加绑定 D1 数据库，选择你刚创建的数据库，变量名称填 **DB**
-4. 设置环境变量 NEXT_PUBLIC_STORAGE_TYPE，值为 **d1**；设置 USERNAME 和 PASSWORD 作为站长账号
-5. 重试部署
-
-### Docker 部署
-
-#### 直接运行（最简单，localstorage）
-
-```bash
-# 拉取预构建镜像
-# 或拉取最新版本
-docker pull ghcr.io/stardm0/moontv:latest
-
-# 运行容器
-# -d: 后台运行  -p: 映射端口 3000 -> 3000
-docker run -d --name moontv -p 3000:3000 --env PASSWORD=your_password ghcr.io/stardm0/moontv:latest
-```
-
-#### Docker Compose
-
-##### local storage 存储
-
-```yaml
+```yml
 services:
-  startv-core:
-    image: ghcr.io/stardm0/moontv:latest
-    container_name: startv-core
+  moontv-core:
+    image: ghcr.io/moontechlab/lunatv:latest
+    container_name: moontv-core
     restart: on-failure
     ports:
       - '3000:3000'
     environment:
-      - PASSWORD=password
+      - USERNAME=admin
+      - PASSWORD=admin_password
+      - NEXT_PUBLIC_STORAGE_TYPE=kvrocks
+      - KVROCKS_URL=redis://moontv-kvrocks:6666
+    networks:
+      - moontv-network
+    depends_on:
+      - moontv-kvrocks
+  moontv-kvrocks:
+    image: apache/kvrocks
+    container_name: moontv-kvrocks
+    restart: unless-stopped
+    volumes:
+      - kvrocks-data:/var/lib/kvrocks
+    networks:
+      - moontv-network
+networks:
+  moontv-network:
+    driver: bridge
+volumes:
+  kvrocks-data:
 ```
 
-##### Upstash 存储
+### Redis 存储（有一定的丢数据风险）
 
-```yaml
+```yml
 services:
-  startv-core:
-    image: ghcr.io/stardm0/moontv:latest
-    container_name: startv-core
+  moontv-core:
+    image: ghcr.io/moontechlab/lunatv:latest
+    container_name: moontv-core
+    restart: on-failure
+    ports:
+      - '3000:3000'
+    environment:
+      - USERNAME=admin
+      - PASSWORD=admin_password
+      - NEXT_PUBLIC_STORAGE_TYPE=redis
+      - REDIS_URL=redis://moontv-redis:6379
+    networks:
+      - moontv-network
+    depends_on:
+      - moontv-redis
+  moontv-redis:
+    image: redis:alpine
+    container_name: moontv-redis
+    restart: unless-stopped
+    networks:
+      - moontv-network
+    # 请开启持久化，否则升级/重启后数据丢失
+    volumes:
+      - ./data:/data
+networks:
+  moontv-network:
+    driver: bridge
+```
+
+### Upstash 存储
+
+1. 在 [upstash](https://upstash.com/) 注册账号并新建一个 Redis 实例，名称任意。
+2. 复制新数据库的 **HTTPS ENDPOINT 和 TOKEN**
+3. 使用如下 docker compose
+```yml
+services:
+  moontv-core:
+    image: ghcr.io/moontechlab/lunatv:latest
+    container_name: moontv-core
     restart: on-failure
     ports:
       - '3000:3000'
@@ -211,62 +169,114 @@ services:
       - USERNAME=admin
       - PASSWORD=admin_password
       - NEXT_PUBLIC_STORAGE_TYPE=upstash
-      - UPSTASH_URL= https 开头的 HTTPS ENDPOINT
-      - UPSTASH_TOKEN= TOKEN
+      - UPSTASH_URL=上面 https 开头的 HTTPS ENDPOINT
+      - UPSTASH_TOKEN=上面的 TOKEN
 ```
 
-## 环境变量
+### ☁️ Zeabur 部署（推荐）
 
-| 变量                                | 说明                                         | 可选值                           | 默认值                                                                                                                     |
-| ----------------------------------- | -------------------------------------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| USERNAME                            | 非 localstorage 部署时的管理员账号           | 任意字符串                       | （空）                                                                                                                     |
-| PASSWORD                            | 非 localstorage 部署时为管理员密码           | 任意字符串                       | （空）                                                                                                                     |
-| NEXT_PUBLIC_SITE_NAME               | 站点名称                                     | 任意字符串                       | MoonTV                                                                                                                     |
-| ANNOUNCEMENT                        | 站点公告                                     | 任意字符串                       | 本网站仅提供影视信息搜索服务，所有内容均来自第三方网站。本站不存储任何视频资源，不对任何内容的准确性、合法性、完整性负责。 |
-| NEXT_PUBLIC_STORAGE_TYPE            | 播放记录/收藏的存储方式                      | localstorage、redis、d1、upstash | localstorage                                                                                                               |
-| REDIS_URL                           | redis 连接 url                               | 连接 url                         | 空                                                                                                                         |
-| UPSTASH_URL                         | upstash redis 连接 url                       | 连接 url                         | 空                                                                                                                         |
-| UPSTASH_TOKEN                       | upstash redis 连接 token                     | 连接 token                       | 空                                                                                                                         |
-| NEXT_PUBLIC_ENABLE_REGISTER         | 是否开放注册，仅在非 localstorage 部署时生效 | true / false                     | false                                                                                                                      |
-| NEXT_PUBLIC_SEARCH_MAX_PAGE         | 搜索接口可拉取的最大页数                     | 1-50                             | 5                                                                                                                          |
-| NEXT_PUBLIC_DOUBAN_PROXY_TYPE       | 豆瓣数据源请求方式                           | 见下方                           | direct                                                                                                                     |
-| NEXT_PUBLIC_DOUBAN_PROXY            | 自定义豆瓣数据代理 URL                       | url prefix                       | (空)                                                                                                                       |
-| NEXT_PUBLIC_DOUBAN_IMAGE_PROXY_TYPE | 豆瓣图片代理类型                             | 见下方                           | direct                                                                                                                     |
-| NEXT_PUBLIC_DOUBAN_IMAGE_PROXY      | 自定义豆瓣图片代理 URL                       | url prefix                       | (空)                                                                                                                       |
-| NEXT_PUBLIC_DISABLE_YELLOW_FILTER   | 关闭色情内容过滤                             | true/false                       | false                                                                                                                      |
-| NEXT_PUBLIC_DANMU_API_BASE_URL      | 弹幕接口地址                             | 接口地址                       | https://thriving-dragon-80fe24.netlify.app                                                                                                                      |
+Thanks to @SzeMeng76
 
-NEXT_PUBLIC_DOUBAN_PROXY_TYPE 选项解释：
+Zeabur 是一站式云端部署平台，使用预构建的 Docker 镜像可以快速部署，无需等待构建。
 
-- direct: 由服务器直接请求豆瓣源站
-- cors-proxy-zwei: 浏览器向 cors proxy 请求豆瓣数据，该 cors proxy 由 [Zwei](https://github.com/bestzwei) 搭建
-- cmliussss-cdn-tencent: 浏览器向豆瓣 CDN 请求数据，该 CDN 由 [CMLiussss](https://github.com/cmliu) 搭建，并由腾讯云 cdn 提供加速
-- cmliussss-cdn-ali: 浏览器向豆瓣 CDN 请求数据，该 CDN 由 [CMLiussss](https://github.com/cmliu) 搭建，并由阿里云 cdn 提供加速
+**部署步骤：**
 
-- custom: 用户自定义 proxy，由 NEXT_PUBLIC_DOUBAN_PROXY 定义
+1. **添加 KVRocks 服务**（先添加数据库）
+   - 点击 "Add Service" > "Docker Images"
+   - 输入镜像名称：`apache/kvrocks`
+   - 配置端口：`6666` (TCP)
+   - **记住服务名称**（通常是 `apachekvrocks`）
+   - **配置持久化卷（重要）**：
+     * 在服务设置中找到 "Volumes" 部分
+     * 点击 "Add Volume" 添加新卷
+     * Volume ID: `kvrocks-data`（可自定义，仅支持字母、数字、连字符）
+     * Path: `/var/lib/kvrocks/db`
+     * 保存配置
 
-NEXT_PUBLIC_DOUBAN_IMAGE_PROXY_TYPE 选项解释：
+   > 💡 **重要提示**：持久化卷路径必须设置为 `/var/lib/kvrocks/db`（KVRocks 数据目录），这样配置文件保留在容器内，数据库文件持久化，重启后数据不会丢失！
 
-- direct：由浏览器直接请求豆瓣分配的默认图片域名
-- server：由服务器代理请求豆瓣分配的默认图片域名
-- img3：由浏览器请求豆瓣官方的精品 cdn（阿里云）
-- cmliussss-cdn-tencent：由浏览器请求豆瓣 CDN，该 CDN 由 [CMLiussss](https://github.com/cmliu) 搭建，并由腾讯云 cdn 提供加速
-- cmliussss-cdn-ali：由浏览器请求豆瓣 CDN，该 CDN 由 [CMLiussss](https://github.com/cmliu) 搭建，并由阿里云 cdn 提供加速
-- custom: 用户自定义 proxy，由 NEXT_PUBLIC_DOUBAN_IMAGE_PROXY 定义
+2. **添加 LunaTV 服务**
+   - 点击 "Add Service" > "Docker Images"
+   - 输入镜像名称：`ghcr.io/moontechlab/lunatv:latest`
+   - 配置端口：`3000` (HTTP)
 
-## 配置说明
+3. **配置环境变量**
 
-如果为 localstorage 模式所有可自定义项集中在根目录的 `config.json` 中(localstorage 模式)
-非 localstorage 可在部署好的网页中直接配置
+   在 LunaTV 服务的环境变量中添加：
+
+   ```env
+   # 必填：管理员账号
+   USERNAME=admin
+   PASSWORD=your_secure_password
+
+   # 必填：存储配置
+   NEXT_PUBLIC_STORAGE_TYPE=kvrocks
+   KVROCKS_URL=redis://apachekvrocks:6666
+
+   # 可选：站点配置
+   SITE_BASE=https://your-domain.zeabur.app
+   NEXT_PUBLIC_SITE_NAME=LunaTV Enhanced
+   ANNOUNCEMENT=欢迎使用 LunaTV Enhanced Edition
+
+   # 可选：豆瓣代理配置（推荐）
+   NEXT_PUBLIC_DOUBAN_PROXY_TYPE=cmliussss-cdn-tencent
+   NEXT_PUBLIC_DOUBAN_IMAGE_PROXY_TYPE=cmliussss-cdn-tencent
+   ```
+
+   **注意**：
+   - 使用服务名称作为主机名：`redis://apachekvrocks:6666`
+   - 如果服务名称不同，请替换为实际名称
+   - 两个服务必须在同一个 Project 中
+
+4. **部署完成**
+   - Zeabur 会自动拉取镜像并启动服务
+   - 等待服务就绪后，需要手动设置访问域名（见下一步）
+
+#### 5. 设置访问域名（必须）
+
+   - 在 LunaTV 服务页面，点击 "Networking" 或 "网络" 标签
+   - 点击 "Generate Domain" 生成 Zeabur 提供的免费域名（如 `xxx.zeabur.app`）
+   - 或者绑定自定义域名：
+     * 点击 "Add Domain" 添加你的域名
+     * 按照提示配置 DNS CNAME 记录指向 Zeabur 提供的目标地址
+   - 设置完域名后即可通过域名访问 LunaTV
+
+6. **绑定自定义域名（可选）**
+   - 在服务设置中点击 "Domains"
+   - 添加你的自定义域名
+   - 配置 DNS CNAME 记录指向 Zeabur 提供的域名
+
+#### 🔄 更新 Docker 镜像
+
+当 Docker 镜像有新版本发布时，Zeabur 不会自动更新。需要手动触发更新。
+
+**更新步骤：**
+
+1. **进入服务页面**
+   - 点击需要更新的服务（LunaTV 或 KVRocks）
+
+2. **重启服务**
+   - 点击 **"服务状态"** 页面，再点击 **"重启当前版本"** 按钮
+   - Zeabur 会自动拉取最新的 `latest` 镜像并重新部署
+
+> 💡 **提示**：
+> - 使用 `latest` 标签时，Restart 会自动拉取最新镜像
+> - 生产环境推荐使用固定版本标签（如 `v5.5.6`）避免意外更新
+
+## 配置文件
+
+完成部署后为空壳应用，无播放源，需要站长在管理后台的配置文件设置中填写配置文件（后续会支持订阅）
+
+配置文件示例如下：
 
 ```json
 {
   "cache_time": 7200,
   "api_site": {
     "dyttzy": {
-      "api": "http://caiji.dyttzyapi.com/api.php/provide/vod",
-      "name": "电影天堂资源",
-      "detail": "http://caiji.dyttzyapi.com"
+      "api": "http://xxx.com/api.php/provide/vod",
+      "name": "示例资源",
+      "detail": "http://xxx.com"
     }
     // ...更多站点
   },
@@ -300,50 +310,70 @@ custom_category 支持的自定义分类已知如下：
 
 MoonTV 支持标准的苹果 CMS V10 API 格式。
 
-修改后 **无需重新构建**，服务会在启动时读取一次。
+## 订阅
 
-## 管理员配置
+将完整的配置文件 base58 编码后提供 http 服务即为订阅链接，可在 MoonTV 后台/Helios 中使用。
 
-**该特性目前仅支持通过非 localstorage 存储的部署方式使用**
+## 自动更新
 
-支持在运行时动态变更服务配置
+可借助 [watchtower](https://github.com/containrrr/watchtower) 自动更新镜像容器
 
-设置环境变量 USERNAME 和 PASSWORD 即为站长用户，站长可设置用户为管理员
+dockge/komodo 等 docker compose UI 也有自动更新功能
 
-站长或管理员访问 `/admin` 即可进行管理员配置
+## 环境变量
+
+| 变量                                | 说明                                         | 可选值                           | 默认值                                                                                                                     |
+| ----------------------------------- | -------------------------------------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| USERNAME                            | 站长账号           | 任意字符串                       | 无默认，必填字段                                                                                                                     |
+| PASSWORD                            | 站长密码           | 任意字符串                       | 无默认，必填字段                                                                                                                     |
+| SITE_BASE                           | 站点 url              |       形如 https://example.com                  | 空                                                                                                                     |
+| NEXT_PUBLIC_SITE_NAME               | 站点名称                                     | 任意字符串                       | MoonTV                                                                                                                     |
+| ANNOUNCEMENT                        | 站点公告                                     | 任意字符串                       | 本网站仅提供影视信息搜索服务，所有内容均来自第三方网站。本站不存储任何视频资源，不对任何内容的准确性、合法性、完整性负责。 |
+| NEXT_PUBLIC_STORAGE_TYPE            | 播放记录/收藏的存储方式                      | redis、kvrocks、upstash | 无默认，必填字段                                                                                                               |
+| KVROCKS_URL                           | kvrocks 连接 url                               | 连接 url                         | 空                                                                                                                         |
+| REDIS_URL                           | redis 连接 url                               | 连接 url                         | 空                                                                                                                         |
+| UPSTASH_URL                         | upstash redis 连接 url                       | 连接 url                         | 空                                                                                                                         |
+| UPSTASH_TOKEN                       | upstash redis 连接 token                     | 连接 token                       | 空                                                                                                                         |
+| NEXT_PUBLIC_SEARCH_MAX_PAGE         | 搜索接口可拉取的最大页数                     | 1-50                             | 5                                                                                                                          |
+| NEXT_PUBLIC_DOUBAN_PROXY_TYPE       | 豆瓣数据源请求方式                           | 见下方                           | direct                                                                                                                     |
+| NEXT_PUBLIC_DOUBAN_PROXY            | 自定义豆瓣数据代理 URL                       | url prefix                       | (空)                                                                                                                       |
+| NEXT_PUBLIC_DOUBAN_IMAGE_PROXY_TYPE | 豆瓣图片代理类型                             | 见下方                           | direct                                                                                                                     |
+| NEXT_PUBLIC_DOUBAN_IMAGE_PROXY      | 自定义豆瓣图片代理 URL                       | url prefix                       | (空)                                                                                                                       |
+| NEXT_PUBLIC_DISABLE_YELLOW_FILTER   | 关闭色情内容过滤                             | true/false                       | false                                                                                                                      |
+| NEXT_PUBLIC_FLUID_SEARCH | 是否开启搜索接口流式输出 | true/ false | true |
+
+NEXT_PUBLIC_DOUBAN_PROXY_TYPE 选项解释：
+
+- direct: 由服务器直接请求豆瓣源站
+- cors-proxy-zwei: 浏览器向 cors proxy 请求豆瓣数据，该 cors proxy 由 [Zwei](https://github.com/bestzwei) 搭建
+- cmliussss-cdn-tencent: 浏览器向豆瓣 CDN 请求数据，该 CDN 由 [CMLiussss](https://github.com/cmliu) 搭建，并由腾讯云 cdn 提供加速
+- cmliussss-cdn-ali: 浏览器向豆瓣 CDN 请求数据，该 CDN 由 [CMLiussss](https://github.com/cmliu) 搭建，并由阿里云 cdn 提供加速
+- custom: 用户自定义 proxy，由 NEXT_PUBLIC_DOUBAN_PROXY 定义
+
+NEXT_PUBLIC_DOUBAN_IMAGE_PROXY_TYPE 选项解释：
+
+- direct：由浏览器直接请求豆瓣分配的默认图片域名
+- server：由服务器代理请求豆瓣分配的默认图片域名
+- img3：由浏览器请求豆瓣官方的精品 cdn（阿里云）
+- cmliussss-cdn-tencent：由浏览器请求豆瓣 CDN，该 CDN 由 [CMLiussss](https://github.com/cmliu) 搭建，并由腾讯云 cdn 提供加速
+- cmliussss-cdn-ali：由浏览器请求豆瓣 CDN，该 CDN 由 [CMLiussss](https://github.com/cmliu) 搭建，并由阿里云 cdn 提供加速
+- custom: 用户自定义 proxy，由 NEXT_PUBLIC_DOUBAN_IMAGE_PROXY 定义
+
+## 客户端
+
+v100.0.0 以上版本可配合 [Selene](https://github.com/MoonTechLab/Selene) 使用，移动端体验更加友好，数据完全同步
 
 ## AndroidTV 使用
 
 目前该项目可以配合 [OrionTV](https://github.com/zimplexing/OrionTV) 在 Android TV 上使用，可以直接作为 OrionTV 后端
 
-## TVBox 对接
-
-- 在首页右上角的“设置”中，开启“启用 TVBox 接口”。
-- 可选择“随机”生成访问密码，或自定义后点击“保存”。
-- 系统会生成可直接复制的接口地址，形式为：`https://你的域名/api/tvbox/config?pwd=你的口令`。
-- 将该地址填入 TVBox 的订阅/配置接口即可使用。
-- 如需关闭对接，关闭开关即可。
-
-### 本地存储(localstorage)模式
-
-- 开关由环境变量控制：`TVBOX_ENABLED=true|false`（默认 true，未设置即开启）
-- 接口访问口令使用登录密码：`PASSWORD`
-- 生成的订阅地址示例：`https://你的域名/api/tvbox/config?pwd=$PASSWORD`
-- 设置面板中的开关与保存在本地模式下仅用于展示（被禁用），请通过环境变量控制。
-
-## Selene 使用
-
-该项目已兼容 [Selene](https://github.com/MoonTechLab/Selene) 在移动端上使用，可以直接作为 Selene 后端(本地存储不支持)
+已实现播放记录和网页端同步
 
 ## 安全与隐私提醒
 
 ### 请设置密码保护并关闭公网注册
 
-为了您的安全和避免潜在的法律风险，我们要求在部署时设置密码保护并**强烈建议关闭公网注册**：
-
-- **避免公开访问**：不设置密码的实例任何人都可以访问，可能被恶意利用
-- **防范版权风险**：公开的视频搜索服务可能面临版权方的投诉举报
-- **保护个人隐私**：设置密码可以限制访问范围，保护您的使用记录
+为了您的安全和避免潜在的法律风险，我们要求在部署时**强烈建议关闭公网注册**：
 
 ### 部署要求
 
@@ -357,6 +387,7 @@ MoonTV 支持标准的苹果 CMS V10 API 格式。
 - 请勿将部署的实例用于商业用途或公开服务
 - 如因公开分享导致的任何法律问题，用户需自行承担责任
 - 项目开发者不对用户的使用行为承担任何法律责任
+- 本项目不在中国大陆地区提供服务。如有该项目在向中国大陆地区提供服务，属个人行为。在该地区使用所产生的法律风险及责任，属于用户个人行为，与本项目无关，须自行承担全部责任。特此声明
 
 ## License
 
@@ -372,8 +403,6 @@ MoonTV 支持标准的苹果 CMS V10 API 格式。
 - [CMLiussss](https://github.com/cmliu) — 提供豆瓣 CDN 服务
 - 感谢所有提供免费影视接口的站点。
 
----
+## Star History
 
-## ⭐ Star 趋势
-
-[![Stargazers over time](https://starchart.cc/stardm0/MoonTV.svg?variant=adaptive)](https://starchart.cc/stardm0/MoonTV)
+[![Star History Chart](https://api.star-history.com/svg?repos=MoonTechLab/LunaTV&type=Date)](https://www.star-history.com/#MoonTechLab/LunaTV&Date)

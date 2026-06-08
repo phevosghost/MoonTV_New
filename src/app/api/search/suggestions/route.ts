@@ -2,133 +2,128 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getCacheTime, getConfig } from '@/lib/config';
-import { searchFromApiStream } from '@/lib/downstream'; // 改用流式方法
+import { AdminConfig } from '@/lib/admin.types';
+import { getAuthInfoFromCookie } from '@/lib/auth';
+import { getAvailableApiSites, getConfig } from '@/lib/config';
+import { searchFromApi } from '@/lib/downstream';
+import { yellowWords } from '@/lib/yellow';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
   try {
+    // 从 cookie 获取用户信息
+    const authInfo = getAuthInfoFromCookie(request);
+    if (!authInfo || !authInfo.username) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const config = await getConfig();
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('q')?.trim();
-    const timeoutParam = searchParams.get('timeout');
-    const timeout = timeoutParam ? parseInt(timeoutParam, 10) * 1000 : undefined; // 转换为毫秒
 
     if (!query) {
       return NextResponse.json({ suggestions: [] });
     }
 
-    const cacheTime = await getCacheTime();
+    // 生成建议
+    const suggestions = await generateSuggestions(config, query, authInfo.username);
 
-    // 用 ReadableStream 流式返回搜索建议
-    const stream = new ReadableStream({
-      async start(controller) {
-        const encoder = new TextEncoder();
+    // 从配置中获取缓存时间，如果没有配置则使用默认值300秒（5分钟）
+    const cacheTime = config.SiteConfig.SiteInterfaceCacheTime || 300;
 
-        const suggestionsStream = generateSuggestionsStream(query, timeout);
-
-        for await (const suggestions of suggestionsStream) {
-          controller.enqueue(
-            encoder.encode(JSON.stringify({ suggestions }) + '\n')
-          );
-        }
-
-        controller.close();
-      },
-    });
-
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8',
-        'Cache-Control': `private, max-age=${cacheTime}`,
-      },
-    });
+    return NextResponse.json(
+      { suggestions },
+      {
+        headers: {
+          'Cache-Control': `public, max-age=${cacheTime}, s-maxage=${cacheTime}`,
+          'CDN-Cache-Control': `public, s-maxage=${cacheTime}`,
+          'Vercel-CDN-Cache-Control': `public, s-maxage=${cacheTime}`,
+          'Netlify-Vary': 'query',
+        },
+      }
+    );
   } catch (error) {
     console.error('获取搜索建议失败', error);
     return NextResponse.json({ error: '获取搜索建议失败' }, { status: 500 });
   }
 }
 
-async function* generateSuggestionsStream(query: string, timeout?: number) {
+async function generateSuggestions(config: AdminConfig, query: string, username: string): Promise<
+  Array<{
+    text: string;
+    type: 'exact' | 'related' | 'suggestion';
+    score: number;
+  }>
+> {
   const queryLower = query.toLowerCase();
-  const config = await getConfig();
-  const apiSites = config.SourceConfig.filter((site: any) => !site.disabled);
+
+  const apiSites = await getAvailableApiSites(username);
+  let realKeywords: string[] = [];
 
   if (apiSites.length > 0) {
-    // 使用第一个可用的数据源进行流式搜索
-    const site = apiSites[0];
-    
-    for await (const results of searchFromApiStream(site, query, true, timeout)) {
-      // 统计关键词出现频率
-      const keywordFrequency = new Map<string, number>();
-      const allKeywords = results
-        .map((r: any) => r.title)
-        .filter(Boolean)
-        .flatMap((title: string) => title.split(/[ -:：·、-]/))
-        .filter((w: string) => w.length > 1 && w.toLowerCase().includes(queryLower));
-      
-      allKeywords.forEach((word) => {
-        const lower = word.toLowerCase();
-        keywordFrequency.set(lower, (keywordFrequency.get(lower) || 0) + 1);
-      });
-      
-      const realKeywords: string[] = Array.from(
-        new Set(allKeywords)
-      ).slice(0, 8);
+    // 取第一个可用的数据源进行搜索
+    const firstSite = apiSites[0];
+    const results = await searchFromApi(firstSite, query);
 
-      const realSuggestions = realKeywords.map((word) => {
-        const wordLower = word.toLowerCase();
-        const queryWords = queryLower.split(/[ -:：·、-]/);
-        const frequency = keywordFrequency.get(wordLower) || 1;
-        
-        // 计算基础匹配分数
-        let score = 1.0;
-        if (wordLower === queryLower) {
-          score = 3.0; // 完全匹配 - 最高优先级
-        } else if (wordLower.startsWith(queryLower)) {
-          score = 2.5; // 开头匹配 - 高优先级
-        } else if (wordLower.endsWith(queryLower)) {
-          score = 2.0; // 结尾匹配 - 中高优先级
-        } else if (queryWords.some((qw) => wordLower.startsWith(qw))) {
-          score = 1.8; // 包含查询词开头
-        } else if (queryWords.some((qw) => wordLower.includes(qw))) {
-          score = 1.5; // 包含查询词
-        }
-        
-        // 长度相似度加分（长度接近查询的更相关）
-        const lengthDiff = Math.abs(wordLower.length - queryLower.length);
-        const lengthSimilarity = 1 / (1 + lengthDiff * 0.1);
-        score += lengthSimilarity * 0.3;
-        
-        // 频率加分（出现次数多的更相关，但使用对数避免过度影响）
-        const frequencyBonus = Math.log(frequency + 1) * 0.2;
-        score += frequencyBonus;
-        
-        // 长度惩罚（过长的关键词稍微降权）
-        if (wordLower.length > queryLower.length * 2) {
-          score -= 0.2;
-        }
-
-        return { text: word, score, frequency };
-      });
-
-      const sortedSuggestions = realSuggestions
-        .sort((a, b) => {
-          // 首先按分数排序
-          if (Math.abs(a.score - b.score) > 0.01) {
-            return b.score - a.score;
-          }
-          // 分数相近时，按频率排序
-          if (a.frequency !== b.frequency) {
-            return b.frequency - a.frequency;
-          }
-          // 频率相同时，按长度排序（较短的优先）
-          return a.text.length - b.text.length;
-        })
-        .map(({ text }) => ({ text })); // 只保留 text 字段
-
-      // 每次 yield 一批建议
-      yield sortedSuggestions;
-    }
+    realKeywords = Array.from(
+      new Set(
+        results
+          .filter((r: any) => config.SiteConfig.DisableYellowFilter || !yellowWords.some((word: string) => (r.type_name || '').includes(word)))
+          .map((r: any) => r.title)
+          .filter(Boolean)
+          .flatMap((title: string) => title.split(/[ -:：·、-]/))
+          .filter(
+            (w: string) => w.length > 1 && w.toLowerCase().includes(queryLower)
+          )
+      )
+    ).slice(0, 8);
   }
+
+  // 根据关键词与查询的匹配程度计算分数，并动态确定类型
+  const realSuggestions = realKeywords.map((word) => {
+    const wordLower = word.toLowerCase();
+    const queryWords = queryLower.split(/[ -:：·、-]/);
+
+    // 计算匹配分数：完全匹配得分更高
+    let score = 1.0;
+    if (wordLower === queryLower) {
+      score = 2.0; // 完全匹配
+    } else if (
+      wordLower.startsWith(queryLower) ||
+      wordLower.endsWith(queryLower)
+    ) {
+      score = 1.8; // 前缀或后缀匹配
+    } else if (queryWords.some((qw) => wordLower.includes(qw))) {
+      score = 1.5; // 包含查询词
+    }
+
+    // 根据匹配程度确定类型
+    let type: 'exact' | 'related' | 'suggestion' = 'related';
+    if (score >= 2.0) {
+      type = 'exact';
+    } else if (score >= 1.5) {
+      type = 'related';
+    } else {
+      type = 'suggestion';
+    }
+
+    return {
+      text: word,
+      type,
+      score,
+    };
+  });
+
+  // 按分数降序排列，相同分数按类型优先级排列
+  const sortedSuggestions = realSuggestions.sort((a, b) => {
+    if (a.score !== b.score) {
+      return b.score - a.score; // 分数高的在前
+    }
+    // 分数相同时，按类型优先级：exact > related > suggestion
+    const typePriority = { exact: 3, related: 2, suggestion: 1 };
+    return typePriority[b.type] - typePriority[a.type];
+  });
+
+  return sortedSuggestions;
 }

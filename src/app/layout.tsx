@@ -4,25 +4,22 @@ import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 
 import './globals.css';
-import 'sweetalert2/dist/sweetalert2.min.css';
 
 import { getConfig } from '@/lib/config';
 
 import { GlobalErrorIndicator } from '../components/GlobalErrorIndicator';
-import { NavigationLoadingIndicator } from '../components/NavigationLoadingIndicator';
-import { NavigationLoadingProvider } from '../components/NavigationLoadingProvider';
 import { SiteProvider } from '../components/SiteProvider';
 import { ThemeProvider } from '../components/ThemeProvider';
 
-export const runtime = 'edge';
-
 const inter = Inter({ subsets: ['latin'] });
+export const dynamic = 'force-dynamic';
 
 // 动态生成 metadata，支持配置更新后的标题变化
 export async function generateMetadata(): Promise<Metadata> {
+  const storageType = process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage';
+  const config = await getConfig();
   let siteName = process.env.NEXT_PUBLIC_SITE_NAME || 'MoonTV';
-  if (process.env.NEXT_PUBLIC_STORAGE_TYPE !== 'localstorage') {
-    const config = await getConfig();
+  if (storageType !== 'localstorage') {
     siteName = config.SiteConfig.SiteName;
   }
 
@@ -48,41 +45,53 @@ export default async function RootLayout({
   let announcement =
     process.env.ANNOUNCEMENT ||
     '本网站仅提供影视信息搜索服务，所有内容均来自第三方网站。本站不存储任何视频资源，不对任何内容的准确性、合法性、完整性负责。';
-  let enableRegister = process.env.NEXT_PUBLIC_ENABLE_REGISTER === 'true';
-  let doubanProxyType = process.env.NEXT_PUBLIC_DOUBAN_PROXY_TYPE || 'direct';
+
+  let doubanProxyType = process.env.NEXT_PUBLIC_DOUBAN_PROXY_TYPE || 'cmliussss-cdn-tencent';
   let doubanProxy = process.env.NEXT_PUBLIC_DOUBAN_PROXY || '';
   let doubanImageProxyType =
-    process.env.NEXT_PUBLIC_DOUBAN_IMAGE_PROXY_TYPE || 'direct';
+    process.env.NEXT_PUBLIC_DOUBAN_IMAGE_PROXY_TYPE || 'cmliussss-cdn-tencent';
   let doubanImageProxy = process.env.NEXT_PUBLIC_DOUBAN_IMAGE_PROXY || '';
   let disableYellowFilter =
     process.env.NEXT_PUBLIC_DISABLE_YELLOW_FILTER === 'true';
-  let danmakuApiBaseUrl =
-    process.env.NEXT_PUBLIC_DANMU_API_BASE_URL ||
-    'https://thriving-dragon-80fe24.netlify.app/';
+  let fluidSearch = process.env.NEXT_PUBLIC_FLUID_SEARCH !== 'false';
+  let enableWebLive = false;
+  let customCategories = [] as {
+    name: string;
+    type: 'movie' | 'tv';
+    query: string;
+  }[];
   if (storageType !== 'localstorage') {
     const config = await getConfig();
     siteName = config.SiteConfig.SiteName;
     announcement = config.SiteConfig.Announcement;
-    enableRegister = config.UserConfig.AllowRegister;
+
     doubanProxyType = config.SiteConfig.DoubanProxyType;
     doubanProxy = config.SiteConfig.DoubanProxy;
     doubanImageProxyType = config.SiteConfig.DoubanImageProxyType;
     doubanImageProxy = config.SiteConfig.DoubanImageProxy;
     disableYellowFilter = config.SiteConfig.DisableYellowFilter;
-    danmakuApiBaseUrl =
-      config.SiteConfig.DanmakuApiBaseUrl || danmakuApiBaseUrl;
+    customCategories = config.CustomCategories.filter(
+      (category) => !category.disabled
+    ).map((category) => ({
+      name: category.name || '',
+      type: category.type,
+      query: category.query,
+    }));
+    fluidSearch = config.SiteConfig.FluidSearch;
+    enableWebLive = config.SiteConfig.EnableWebLive ?? false;
   }
 
   // 将运行时配置注入到全局 window 对象，供客户端在运行时读取
   const runtimeConfig = {
     STORAGE_TYPE: process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage',
-    ENABLE_REGISTER: enableRegister,
     DOUBAN_PROXY_TYPE: doubanProxyType,
     DOUBAN_PROXY: doubanProxy,
     DOUBAN_IMAGE_PROXY_TYPE: doubanImageProxyType,
     DOUBAN_IMAGE_PROXY: doubanImageProxy,
     DISABLE_YELLOW_FILTER: disableYellowFilter,
-    DANMU_API_BASE_URL: danmakuApiBaseUrl,
+    CUSTOM_CATEGORIES: customCategories,
+    FLUID_SEARCH: fluidSearch,
+    ENABLE_WEB_LIVE: enableWebLive,
   };
 
   return (
@@ -110,13 +119,10 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <NavigationLoadingProvider>
-            <SiteProvider siteName={siteName} announcement={announcement}>
-              <NavigationLoadingIndicator />
-              {children}
-              <GlobalErrorIndicator />
-            </SiteProvider>
-          </NavigationLoadingProvider>
+          <SiteProvider siteName={siteName} announcement={announcement}>
+            {children}
+            <GlobalErrorIndicator />
+          </SiteProvider>
         </ThemeProvider>
       </body>
     </html>

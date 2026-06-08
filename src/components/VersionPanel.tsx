@@ -16,7 +16,8 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { changelog, ChangelogEntry } from '@/lib/changelog';
-import { compareVersions, CURRENT_VERSION, UpdateStatus } from '@/lib/version';
+import { CURRENT_VERSION } from '@/lib/version';
+import { compareVersions, UpdateStatus } from '@/lib/version_check';
 
 interface VersionPanelProps {
   isOpen: boolean;
@@ -47,6 +48,28 @@ export const VersionPanel: React.FC<VersionPanelProps> = ({
     return () => setMounted(false);
   }, []);
 
+  // Body 滚动锁定 - 使用 overflow 方式避免布局问题
+  useEffect(() => {
+    if (isOpen) {
+      const body = document.body;
+      const html = document.documentElement;
+
+      // 保存原始样式
+      const originalBodyOverflow = body.style.overflow;
+      const originalHtmlOverflow = html.style.overflow;
+
+      // 只设置 overflow 来阻止滚动
+      body.style.overflow = 'hidden';
+      html.style.overflow = 'hidden';
+
+      return () => {
+        // 恢复所有原始样式
+        body.style.overflow = originalBodyOverflow;
+        html.style.overflow = originalHtmlOverflow;
+      };
+    }
+  }, [isOpen]);
+
   // 获取远程变更日志
   useEffect(() => {
     if (isOpen) {
@@ -58,7 +81,7 @@ export const VersionPanel: React.FC<VersionPanelProps> = ({
   const fetchRemoteChangelog = async () => {
     try {
       const response = await fetch(
-        'https://raw.githubusercontent.com/Stardm0/MoonTV/main/CHANGELOG'
+        'https://raw.githubusercontent.com/MoonTechLab/LunaTV/main/CHANGELOG'
       );
       if (response.ok) {
         const content = await response.text();
@@ -267,10 +290,30 @@ export const VersionPanel: React.FC<VersionPanelProps> = ({
       <div
         className='fixed inset-0 bg-black/50 backdrop-blur-sm z-[1000]'
         onClick={onClose}
+        onTouchMove={(e) => {
+          // 只阻止滚动，允许其他触摸事件
+          e.preventDefault();
+        }}
+        onWheel={(e) => {
+          // 阻止滚轮滚动
+          e.preventDefault();
+        }}
+        style={{
+          touchAction: 'none',
+        }}
       />
 
       {/* 版本面板 */}
-      <div className='fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-xl max-h-[90vh] bg-white dark:bg-gray-900 rounded-xl shadow-xl z-[1001] overflow-hidden'>
+      <div
+        className='fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-xl max-h-[90vh] bg-white dark:bg-gray-900 rounded-xl shadow-xl z-[1001] overflow-hidden'
+        onTouchMove={(e) => {
+          // 允许版本面板内部滚动，阻止事件冒泡到外层
+          e.stopPropagation();
+        }}
+        style={{
+          touchAction: 'auto', // 允许面板内的正常触摸操作
+        }}
+      >
         {/* 标题栏 */}
         <div className='flex items-center justify-between p-3 sm:p-6 border-b border-gray-200 dark:border-gray-700'>
           <div className='flex items-center gap-2 sm:gap-3'>
@@ -318,7 +361,16 @@ export const VersionPanel: React.FC<VersionPanelProps> = ({
                         v{CURRENT_VERSION} → v{latestVersion}
                       </p>
                     </div>
-                  </div>                 
+                  </div>
+                  <a
+                    href='https://github.com/MoonTechLab/LunaTV'
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    className='inline-flex items-center justify-center gap-2 px-3 py-2 bg-yellow-600 hover:bg-yellow-700 text-white text-xs sm:text-sm rounded-lg transition-colors shadow-sm w-full'
+                  >
+                    <Download className='w-3 h-3 sm:w-4 sm:h-4' />
+                    前往仓库
+                  </a>
                 </div>
               </div>
             )}
@@ -339,7 +391,16 @@ export const VersionPanel: React.FC<VersionPanelProps> = ({
                         已是最新版本 v{CURRENT_VERSION}
                       </p>
                     </div>
-                  </div>                  
+                  </div>
+                  <a
+                    href='https://github.com/MoonTechLab/LunaTV'
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    className='inline-flex items-center justify-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-xs sm:text-sm rounded-lg transition-colors shadow-sm w-full'
+                  >
+                    <CheckCircle className='w-3 h-3 sm:w-4 sm:h-4' />
+                    前往仓库
+                  </a>
                 </div>
               </div>
             )}

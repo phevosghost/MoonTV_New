@@ -7,7 +7,6 @@ import { Suspense } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { GetBangumiCalendarData } from '@/lib/bangumi.client';
-import { getCustomCategories } from '@/lib/config.client';
 import {
   getDoubanCategories,
   getDoubanList,
@@ -20,6 +19,7 @@ import DoubanCustomSelector from '@/components/DoubanCustomSelector';
 import DoubanSelector from '@/components/DoubanSelector';
 import PageLayout from '@/components/PageLayout';
 import VideoCard from '@/components/VideoCard';
+import VirtualGrid from '@/components/VirtualGrid';
 
 function DoubanPageClient() {
   const searchParams = useSearchParams();
@@ -81,9 +81,10 @@ function DoubanPageClient() {
 
   // 获取自定义分类数据
   useEffect(() => {
-    getCustomCategories().then((categories) => {
-      setCustomCategories(categories);
-    });
+    const runtimeConfig = (window as any).RUNTIME_CONFIG;
+    if (runtimeConfig?.CUSTOM_CATEGORIES?.length > 0) {
+      setCustomCategories(runtimeConfig.CUSTOM_CATEGORIES);
+    }
   }, []);
 
   // 同步最新参数值到 ref
@@ -303,7 +304,7 @@ function DoubanPageClient() {
                 item.images.medium ||
                 item.images.small ||
                 item.images.grid,
-              rate: item.rating?.score?.toString() || '',
+              rate: item.rating?.score?.toFixed(1) || '',
               year: item.air_date?.split('-')?.[0] || '',
             })),
           };
@@ -754,12 +755,18 @@ function DoubanPageClient() {
         {/* 内容展示区域 */}
         <div className='max-w-[95%] mx-auto mt-8 overflow-visible'>
           {/* 内容网格 */}
-          <div className='justify-start grid grid-cols-3 gap-x-2 gap-y-12 px-0 sm:px-2 sm:grid-cols-[repeat(auto-fill,minmax(160px,1fr))] sm:gap-x-8 sm:gap-y-20'>
-            {loading || !selectorsReady
-              ? // 显示骨架屏
-              skeletonData.map((index) => <DoubanCardSkeleton key={index} />)
-              : // 显示实际数据
-              doubanData.map((item, index) => (
+          {loading || !selectorsReady
+            ? // 显示骨架屏
+            <div className='justify-start grid grid-cols-3 gap-x-2 gap-y-12 px-0 sm:px-2 sm:grid-cols-[repeat(auto-fill,minmax(160px,1fr))] sm:gap-x-8 sm:gap-y-20'>
+              {skeletonData.map((index) => <DoubanCardSkeleton key={index} />)}
+            </div>
+            : // 显示实际数据
+            <VirtualGrid
+              items={doubanData}
+              className='grid-cols-3 gap-x-2 px-0 sm:px-2 sm:grid-cols-[repeat(auto-fill,minmax(160px,1fr))] sm:gap-x-8'
+              rowGapClass='pb-12 sm:pb-20'
+              estimateRowHeight={320}
+              renderItem={(item, index) => (
                 <div key={`${item.title}-${index}`} className='w-full'>
                   <VideoCard
                     from='douban'
@@ -774,8 +781,9 @@ function DoubanPageClient() {
                     }
                   />
                 </div>
-              ))}
-          </div>
+              )}
+            />
+          }
 
           {/* 加载更多指示器 */}
           {hasMore && !loading && (

@@ -93,41 +93,58 @@ html:not(.dark) body {
   }
 }
 
-/* View Transitions API 动画 - 整体渐变模式 */
-@keyframes fade-in {
+/* 隐藏所有滚动条（兼容 WebKit、Firefox、IE/Edge） */
+* {
+  -ms-overflow-style: none; /* IE & Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+*::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/* View Transitions API 动画 */
+@keyframes slide-from-top {
   from {
-    opacity: 0;
+    clip-path: polygon(0 0, 100% 0, 100% 0, 0 0);
   }
   to {
-    opacity: 1;
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
   }
 }
 
-@keyframes fade-out {
+@keyframes slide-from-bottom {
   from {
-    opacity: 1;
+    clip-path: polygon(0 100%, 100% 100%, 100% 100%, 0 100%);
   }
   to {
-    opacity: 0;
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
   }
 }
 
 ::view-transition-old(root),
 ::view-transition-new(root) {
-  animation-duration: 0.6s;
+  animation-duration: 0.8s;
   animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   animation-fill-mode: both;
 }
 
 /*
-  整体渐变模式：旧视图淡出，新视图淡入
+  切换时，旧的视图不应该有动画，它应该在下面，等待被新的视图覆盖。
+  这可以防止在动画完成前，页面底部提前变色。
 */
 ::view-transition-old(root) {
-  animation-name: fade-out;
+  animation: none;
 }
 
-::view-transition-new(root) {
-  animation-name: fade-in;
+/* 从浅色到深色：新内容（深色）从顶部滑入 */
+html.dark::view-transition-new(root) {
+  animation-name: slide-from-top;
+}
+
+/* 从深色到浅色：新内容（浅色）从底部滑入 */
+html:not(.dark)::view-transition-new(root) {
+  animation-name: slide-from-bottom;
 }
 
 /* 强制播放器内部的 video 元素高度为 100%，并保持内容完整显示 */

@@ -3,10 +3,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
-import { getConfig } from '@/lib/config';
-import { getStorage } from '@/lib/db';
+import { getConfig, refineConfig } from '@/lib/config';
+import { db } from '@/lib/db';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   const storageType = process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage';
@@ -27,22 +27,19 @@ export async function POST(request: NextRequest) {
 
   try {
     // 检查用户权限
-    const adminConfig = await getConfig();
-    const storage = getStorage();
+    let adminConfig = await getConfig();
 
+    // 仅站长可以修改配置文件
     if (username !== process.env.USERNAME) {
-      const user = adminConfig.UserConfig.Users.find((u) => u.username === username);
-      if (!user || user.role !== 'admin' || user.banned) {
-        return NextResponse.json(
-          { error: '权限不足，只有管理员可以修改配置文件' },
-          { status: 403 }
-        );
-      }
+      return NextResponse.json(
+        { error: '权限不足，只有站长可以修改配置文件' },
+        { status: 401 }
+      );
     }
 
     // 获取请求体
     const body = await request.json();
-    const { configFile } = body;
+    const { configFile, subscriptionUrl, autoUpdate, lastCheckTime } = body;
 
     if (!configFile || typeof configFile !== 'string') {
       return NextResponse.json(
@@ -61,22 +58,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 更新配置文件
     adminConfig.ConfigFile = configFile;
-    
-    if (storage && typeof (storage as any).setAdminConfig === 'function') {
-      await (storage as any).setAdminConfig(adminConfig);
-
-      return NextResponse.json({
-        success: true,
-        message: '配置文件更新成功',
-      });
-    } else {
-      return NextResponse.json(
-        { error: '存储服务不可用' },
-        { status: 500 }
-      );
+    if (!adminConfig.ConfigSubscribtion) {
+      adminConfig.ConfigSubscribtion = {
+        URL: '',
+        AutoUpdate: false,
+        LastCheck: '',
+      };
     }
+
+    // 更新订阅配置
+    if (subscriptionUrl !== undefined) {
+      adminConfig.ConfigSubscribtion.URL = subscriptionUrl;
+    }
+    if (autoUpdate !== undefined) {
+      adminConfig.ConfigSubscribtion.AutoUpdate = autoUpdate;
+    }
+    adminConfig.ConfigSubscribtion.LastCheck = lastCheckTime || '';
+
+    adminConfig = refineConfig(adminConfig);
+    // 更新配置文件
+    await db.saveAdminConfig(adminConfig);
+    return NextResponse.json({
+      success: true,
+      message: '配置文件更新成功',
+    });
   } catch (error) {
     console.error('更新配置文件失败:', error);
     return NextResponse.json(

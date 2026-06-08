@@ -1,26 +1,22 @@
+/* eslint-disable no-console */
+
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
-import { getAvailableApiSites, getCacheTime } from '@/lib/config';
+import { getAvailableApiSites } from '@/lib/config';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 // OrionTV 兼容接口
 export async function GET(request: NextRequest) {
+  const authInfo = getAuthInfoFromCookie(request);
+  if (!authInfo || !authInfo.username) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   try {
-    const auth = getAuthInfoFromCookie(request);
-    const username = auth?.username;
-    const apiSites = await getAvailableApiSites(username);
-    const cacheTime = await getCacheTime();
+    const apiSites = await getAvailableApiSites(authInfo.username);
 
-    return NextResponse.json(apiSites, {
-      headers: {
-        'Cache-Control': `public, max-age=${cacheTime}, s-maxage=${cacheTime}`,
-        'CDN-Cache-Control': `public, s-maxage=${cacheTime}`,
-        'Vercel-CDN-Cache-Control': `public, s-maxage=${cacheTime}`,
-        'Netlify-Vary': 'query',
-      },
-    });
+    return NextResponse.json(apiSites);
   } catch (error) {
     return NextResponse.json({ error: '获取资源失败' }, { status: 500 });
   }

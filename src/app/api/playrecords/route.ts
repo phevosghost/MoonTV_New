@@ -7,7 +7,7 @@ import { getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
 import { PlayRecord } from '@/lib/types';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,12 +18,15 @@ export async function GET(request: NextRequest) {
     }
 
     const config = await getConfig();
-    if (config.UserConfig.Users) {
-      // 检查用户是否被封禁
+    if (authInfo.username !== process.env.USERNAME) {
+      // 非站长，检查用户存在或被封禁
       const user = config.UserConfig.Users.find(
         (u) => u.username === authInfo.username
       );
-      if (user && user.banned) {
+      if (!user) {
+        return NextResponse.json({ error: '用户不存在' }, { status: 401 });
+      }
+      if (user.banned) {
         return NextResponse.json({ error: '用户已被封禁' }, { status: 401 });
       }
     }
@@ -48,12 +51,15 @@ export async function POST(request: NextRequest) {
     }
 
     const config = await getConfig();
-    if (config.UserConfig.Users) {
-      // 检查用户是否被封禁
+    if (authInfo.username !== process.env.USERNAME) {
+      // 非站长，检查用户存在或被封禁
       const user = config.UserConfig.Users.find(
         (u) => u.username === authInfo.username
       );
-      if (user && user.banned) {
+      if (!user) {
+        return NextResponse.json({ error: '用户不存在' }, { status: 401 });
+      }
+      if (user.banned) {
         return NextResponse.json({ error: '用户已被封禁' }, { status: 401 });
       }
     }
@@ -111,12 +117,15 @@ export async function DELETE(request: NextRequest) {
     }
 
     const config = await getConfig();
-    if (config.UserConfig.Users) {
-      // 检查用户是否被封禁
+    if (authInfo.username !== process.env.USERNAME) {
+      // 非站长，检查用户存在或被封禁
       const user = config.UserConfig.Users.find(
         (u) => u.username === authInfo.username
       );
-      if (user && user.banned) {
+      if (!user) {
+        return NextResponse.json({ error: '用户不存在' }, { status: 401 });
+      }
+      if (user.banned) {
         return NextResponse.json({ error: '用户已被封禁' }, { status: 401 });
       }
     }
@@ -138,14 +147,7 @@ export async function DELETE(request: NextRequest) {
       await db.deletePlayRecord(username, source, id);
     } else {
       // 未提供 key，则清空全部播放记录
-      // 目前 DbManager 没有对应方法，这里直接遍历删除
-      const all = await db.getAllPlayRecords(username);
-      await Promise.all(
-        Object.keys(all).map(async (k) => {
-          const [s, i] = k.split('+');
-          if (s && i) await db.deletePlayRecord(username, s, i);
-        })
-      );
+      await db.deleteAllPlayRecords(username);
     }
 
     return NextResponse.json({ success: true }, { status: 200 });

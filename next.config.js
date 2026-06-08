@@ -8,7 +8,11 @@ const nextConfig = {
   },
 
   reactStrictMode: false,
-  swcMinify: true,
+  swcMinify: false,
+
+  experimental: {
+    instrumentationHook: process.env.NODE_ENV === 'production',
+  },
 
   // Uncoment to add domain whitelist
   images: {
@@ -64,12 +68,6 @@ const nextConfig = {
     return config;
   },
 };
-
-// Setup Cloudflare Pages development platform in development mode
-if (process.env.NODE_ENV === 'development') {
-  const { setupDevPlatform } = require('@cloudflare/next-on-pages/next-dev');
-  setupDevPlatform();
-}
 
 const withPWA = require('next-pwa')({
   dest: 'public',

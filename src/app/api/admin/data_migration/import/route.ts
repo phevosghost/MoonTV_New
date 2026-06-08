@@ -1,16 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any,no-console */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { inflate } from 'pako';
+import { promisify } from 'util';
+import { gunzip } from 'zlib';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { configSelfCheck, setCachedConfig } from '@/lib/config';
 import { SimpleCrypto } from '@/lib/crypto';
 import { db } from '@/lib/db';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
-// pako 的 gunzip 是同步的，不需要 promisify
+const gunzipAsync = promisify(gunzip);
 
 export async function POST(req: NextRequest) {
   try {
@@ -60,8 +61,8 @@ export async function POST(req: NextRequest) {
 
     // 解压缩数据
     const compressedBuffer = Buffer.from(decryptedData, 'base64');
-    const decompressedBuffer = inflate(compressedBuffer);
-    const decompressedData = new TextDecoder().decode(decompressedBuffer);
+    const decompressedBuffer = await gunzipAsync(compressedBuffer);
+    const decompressedData = decompressedBuffer.toString();
 
     // 解析JSON数据
     let importData: any;
@@ -91,7 +92,7 @@ export async function POST(req: NextRequest) {
 
       // 重新注册用户（包含密码）
       if (user.password) {
-        await db.registerUser(username, String(user.password));
+        await db.registerUser(username, user.password);
       }
 
       // 导入播放记录

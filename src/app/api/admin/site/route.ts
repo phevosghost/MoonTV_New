@@ -4,9 +4,9 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getConfig } from '@/lib/config';
-import { getStorage } from '@/lib/db';
+import { db } from '@/lib/db';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   const storageType = process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage';
@@ -38,9 +38,8 @@ export async function POST(request: NextRequest) {
       DoubanImageProxyType,
       DoubanImageProxy,
       DisableYellowFilter,
-      DanmakuApiBaseUrl,
-      TVBoxEnabled,
-      TVBoxPassword,
+      FluidSearch,
+      EnableWebLive,
     } = body as {
       SiteName: string;
       Announcement: string;
@@ -51,9 +50,8 @@ export async function POST(request: NextRequest) {
       DoubanImageProxyType: string;
       DoubanImageProxy: string;
       DisableYellowFilter: boolean;
-      DanmakuApiBaseUrl?: string;
-      TVBoxEnabled?: boolean;
-      TVBoxPassword?: string;
+      FluidSearch: boolean;
+      EnableWebLive: boolean;
     };
 
     // 参数校验
@@ -67,16 +65,12 @@ export async function POST(request: NextRequest) {
       typeof DoubanImageProxyType !== 'string' ||
       typeof DoubanImageProxy !== 'string' ||
       typeof DisableYellowFilter !== 'boolean' ||
-      (DanmakuApiBaseUrl !== undefined &&
-        typeof DanmakuApiBaseUrl !== 'string') ||
-      (TVBoxEnabled !== undefined && typeof TVBoxEnabled !== 'boolean') ||
-      (TVBoxPassword !== undefined && typeof TVBoxPassword !== 'string')
+      typeof FluidSearch !== 'boolean'
     ) {
       return NextResponse.json({ error: '参数格式错误' }, { status: 400 });
     }
 
     const adminConfig = await getConfig();
-    const storage = getStorage();
 
     // 权限校验
     if (username !== process.env.USERNAME) {
@@ -100,24 +94,12 @@ export async function POST(request: NextRequest) {
       DoubanImageProxyType,
       DoubanImageProxy,
       DisableYellowFilter,
-      DanmakuApiBaseUrl,
-      TVBoxEnabled,
-      TVBoxPassword,
+      FluidSearch,
+      EnableWebLive: EnableWebLive ?? false,
     };
 
-    // 同步更新 ConfigFile 中的 cache_time
-    try {
-      const configFileData = JSON.parse(adminConfig.ConfigFile);
-      configFileData.cache_time = SiteInterfaceCacheTime;
-      adminConfig.ConfigFile = JSON.stringify(configFileData);
-    } catch (e) {
-      console.error('更新 ConfigFile 中的 cache_time 失败:', e);
-    }
-
     // 写入数据库
-    if (storage && typeof (storage as any).setAdminConfig === 'function') {
-      await (storage as any).setAdminConfig(adminConfig);
-    }
+    await db.saveAdminConfig(adminConfig);
 
     return NextResponse.json(
       { ok: true },

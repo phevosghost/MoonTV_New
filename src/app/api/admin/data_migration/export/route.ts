@@ -1,16 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any,no-console */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { deflate } from 'pako';
+import { promisify } from 'util';
+import { gzip } from 'zlib';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { SimpleCrypto } from '@/lib/crypto';
 import { db } from '@/lib/db';
 import { CURRENT_VERSION } from '@/lib/version';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
-// pako 的 gzip 是同步的，不需要 promisify
+const gzipAsync = promisify(gzip);
 
 export async function POST(req: NextRequest) {
   try {
@@ -88,11 +89,10 @@ export async function POST(req: NextRequest) {
     const jsonData = JSON.stringify(exportData);
 
     // 先压缩数据
-    const compressedData = deflate(jsonData);
+    const compressedData = await gzipAsync(jsonData);
 
     // 使用提供的密码加密压缩后的数据
-    const compressedBase64 = Buffer.from(compressedData).toString('base64');
-    const encryptedData = SimpleCrypto.encrypt(compressedBase64, password);
+    const encryptedData = SimpleCrypto.encrypt(compressedData.toString('base64'), password);
 
     // 生成文件名
     const now = new Date();
@@ -121,29 +121,13 @@ export async function POST(req: NextRequest) {
 // 辅助函数：获取用户密码（通过数据库直接访问）
 async function getUserPassword(username: string): Promise<string | null> {
   try {
-    const storageType = process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage';
-    
-    // D1 数据库存储
-    if (storageType === 'd1') {
-      const d1Db = (process.env as any).DB;
-      if (d1Db) {
-        const result = await d1Db
-          .prepare('SELECT password FROM users WHERE username = ?')
-          .bind(username)
-          .first() as { password: string } | null;
-        return result?.password || null;
-      }
-      return null;
-    }
-    
-    // Redis/Upstash 存储
+    // 使用 Redis 存储的直接访问方法
     const storage = (db as any).storage;
     if (storage && typeof storage.client?.get === 'function') {
       const passwordKey = `u:${username}:pwd`;
       const password = await storage.client.get(passwordKey);
       return password;
     }
-    
     return null;
   } catch (error) {
     console.error(`获取用户 ${username} 密码失败:`, error);
