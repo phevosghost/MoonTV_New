@@ -4,9 +4,9 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getConfig } from '@/lib/config';
-import { db } from '@/lib/db';
+import { getStorage } from '@/lib/db';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 export async function POST(request: NextRequest) {
   const storageType = process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage';
@@ -38,8 +38,10 @@ export async function POST(request: NextRequest) {
       DoubanImageProxyType,
       DoubanImageProxy,
       DisableYellowFilter,
-      FluidSearch,
-      EnableWebLive,
+      DanmakuApiBaseUrl,
+      TVBoxEnabled,
+      TVBoxPassword,
+      PlaybackSaveInterval,
     } = body as {
       SiteName: string;
       Announcement: string;
@@ -50,8 +52,10 @@ export async function POST(request: NextRequest) {
       DoubanImageProxyType: string;
       DoubanImageProxy: string;
       DisableYellowFilter: boolean;
-      FluidSearch: boolean;
-      EnableWebLive: boolean;
+      DanmakuApiBaseUrl?: string;
+      TVBoxEnabled?: boolean;
+      TVBoxPassword?: string;
+      PlaybackSaveInterval?: number;
     };
 
     // 参数校验
@@ -65,12 +69,21 @@ export async function POST(request: NextRequest) {
       typeof DoubanImageProxyType !== 'string' ||
       typeof DoubanImageProxy !== 'string' ||
       typeof DisableYellowFilter !== 'boolean' ||
-      typeof FluidSearch !== 'boolean'
+      (DanmakuApiBaseUrl !== undefined &&
+        typeof DanmakuApiBaseUrl !== 'string') ||
+      (TVBoxEnabled !== undefined && typeof TVBoxEnabled !== 'boolean') ||
+      (TVBoxPassword !== undefined && typeof TVBoxPassword !== 'string') ||
+      (PlaybackSaveInterval !== undefined &&
+        (typeof PlaybackSaveInterval !== 'number' ||
+          !Number.isFinite(PlaybackSaveInterval) ||
+          PlaybackSaveInterval < 1 ||
+          PlaybackSaveInterval > 3600))
     ) {
       return NextResponse.json({ error: '参数格式错误' }, { status: 400 });
     }
 
     const adminConfig = await getConfig();
+    const storage = getStorage();
 
     // 权限校验
     if (username !== process.env.USERNAME) {
@@ -94,12 +107,25 @@ export async function POST(request: NextRequest) {
       DoubanImageProxyType,
       DoubanImageProxy,
       DisableYellowFilter,
-      FluidSearch,
-      EnableWebLive: EnableWebLive ?? false,
+      DanmakuApiBaseUrl,
+      TVBoxEnabled,
+      TVBoxPassword,
+      PlaybackSaveInterval,
     };
 
+    // 同步更新 ConfigFile 中的 cache_time
+    try {
+      const configFileData = JSON.parse(adminConfig.ConfigFile);
+      configFileData.cache_time = SiteInterfaceCacheTime;
+      adminConfig.ConfigFile = JSON.stringify(configFileData);
+    } catch (e) {
+      console.error('更新 ConfigFile 中的 cache_time 失败:', e);
+    }
+
     // 写入数据库
-    await db.saveAdminConfig(adminConfig);
+    if (storage && typeof (storage as any).setAdminConfig === 'function') {
+      await (storage as any).setAdminConfig(adminConfig);
+    }
 
     return NextResponse.json(
       { ok: true },

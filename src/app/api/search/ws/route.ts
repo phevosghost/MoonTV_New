@@ -4,10 +4,10 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getAvailableApiSites, getConfig } from '@/lib/config';
-import { searchFromApi } from '@/lib/downstream';
+import { searchFromApiStream } from '@/lib/downstream';
 import { yellowWords } from '@/lib/yellow';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 export async function GET(request: NextRequest) {
   const authInfo = getAuthInfoFromCookie(request);
@@ -79,18 +79,24 @@ export async function GET(request: NextRequest) {
         try {
           // 添加超时控制
           const searchPromise = Promise.race([
-            searchFromApi(site, query),
+            searchFromApiStream(site, query),
             new Promise((_, reject) =>
               setTimeout(() => reject(new Error(`${site.name} timeout`)), 20000)
             ),
           ]);
 
-          const results = await searchPromise as any[];
+          const resultsGenerator = await searchPromise as AsyncGenerator<any[], void, unknown>;
+          
+          // 收集所有结果
+          const allResults: any[] = [];
+          for await (const batch of resultsGenerator) {
+            allResults.push(...batch);
+          }
 
           // 过滤黄色内容
-          let filteredResults = results;
+          let filteredResults = allResults;
           if (!config.SiteConfig.DisableYellowFilter) {
-            filteredResults = results.filter((result) => {
+            filteredResults = allResults.filter((result) => {
               const typeName = result.type_name || '';
               return !yellowWords.some((word: string) => typeName.includes(word));
             });

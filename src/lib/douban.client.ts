@@ -65,12 +65,9 @@ async function fetchWithTimeout(
   const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时
 
   // 检查是否使用代理
-  const finalUrl =
-    proxyUrl === 'https://cors-anywhere.com/'
-      ? `${proxyUrl}${url}`
-      : proxyUrl
-        ? `${proxyUrl}${encodeURIComponent(url)}`
-        : url;
+  const finalUrl = proxyUrl
+    ? `${proxyUrl}${encodeURIComponent(url)}`
+    : url;
 
   const fetchOptions: RequestInit = {
     signal: controller.signal,
@@ -94,18 +91,17 @@ async function fetchWithTimeout(
 
 function getDoubanProxyConfig(): {
   proxyType:
-  | 'direct'
-  | 'cors-proxy-zwei'
-  | 'cmliussss-cdn-tencent'
-  | 'cmliussss-cdn-ali'
-  | 'cors-anywhere'
-  | 'custom';
+    | 'direct'
+    | 'cors-proxy-zwei'
+    | 'cmliussss-cdn-tencent'
+    | 'cmliussss-cdn-ali'
+    | 'custom';
   proxyUrl: string;
 } {
   const doubanProxyType =
     localStorage.getItem('doubanDataSource') ||
     (window as any).RUNTIME_CONFIG?.DOUBAN_PROXY_TYPE ||
-    'cmliussss-cdn-tencent';
+    'direct';
   const doubanProxy =
     localStorage.getItem('doubanProxyUrl') ||
     (window as any).RUNTIME_CONFIG?.DOUBAN_PROXY ||
@@ -147,8 +143,8 @@ export async function fetchDoubanCategories(
   const target = useTencentCDN
     ? `https://m.douban.cmliussss.net/rexxar/api/v2/subject/recent_hot/${kind}?start=${pageStart}&limit=${pageLimit}&category=${category}&type=${type}`
     : useAliCDN
-      ? `https://m.douban.cmliussss.com/rexxar/api/v2/subject/recent_hot/${kind}?start=${pageStart}&limit=${pageLimit}&category=${category}&type=${type}`
-      : `https://m.douban.com/rexxar/api/v2/subject/recent_hot/${kind}?start=${pageStart}&limit=${pageLimit}&category=${category}&type=${type}`;
+    ? `https://m.douban.cmliussss.com/rexxar/api/v2/subject/recent_hot/${kind}?start=${pageStart}&limit=${pageLimit}&category=${category}&type=${type}`
+    : `https://m.douban.com/rexxar/api/v2/subject/recent_hot/${kind}?start=${pageStart}&limit=${pageLimit}&category=${category}&type=${type}`;
 
   try {
     const response = await fetchWithTimeout(
@@ -204,8 +200,7 @@ export async function getDoubanCategories(
       return fetchDoubanCategories(params, '', true, false);
     case 'cmliussss-cdn-ali':
       return fetchDoubanCategories(params, '', false, true);
-    case 'cors-anywhere':
-      return fetchDoubanCategories(params, 'https://cors-anywhere.com/');
+
     case 'custom':
       return fetchDoubanCategories(params, proxyUrl);
     case 'direct':
@@ -237,8 +232,7 @@ export async function getDoubanList(
       return fetchDoubanList(params, '', true, false);
     case 'cmliussss-cdn-ali':
       return fetchDoubanList(params, '', false, true);
-    case 'cors-anywhere':
-      return fetchDoubanList(params, 'https://cors-anywhere.com/');
+
     case 'custom':
       return fetchDoubanList(params, proxyUrl);
     case 'direct':
@@ -279,8 +273,8 @@ export async function fetchDoubanList(
   const target = useTencentCDN
     ? `https://movie.douban.cmliussss.net/j/search_subjects?type=${type}&tag=${tag}&sort=recommend&page_limit=${pageLimit}&page_start=${pageStart}`
     : useAliCDN
-      ? `https://movie.douban.cmliussss.com/j/search_subjects?type=${type}&tag=${tag}&sort=recommend&page_limit=${pageLimit}&page_start=${pageStart}`
-      : `https://movie.douban.com/j/search_subjects?type=${type}&tag=${tag}&sort=recommend&page_limit=${pageLimit}&page_start=${pageStart}`;
+    ? `https://movie.douban.cmliussss.com/j/search_subjects?type=${type}&tag=${tag}&sort=recommend&page_limit=${pageLimit}&page_start=${pageStart}`
+    : `https://movie.douban.com/j/search_subjects?type=${type}&tag=${tag}&sort=recommend&page_limit=${pageLimit}&page_start=${pageStart}`;
 
   try {
     const response = await fetchWithTimeout(
@@ -357,8 +351,7 @@ export async function getDoubanRecommends(
       return fetchDoubanRecommends(params, '', true, false);
     case 'cmliussss-cdn-ali':
       return fetchDoubanRecommends(params, '', false, true);
-    case 'cors-anywhere':
-      return fetchDoubanRecommends(params, 'https://cors-anywhere.com/');
+
     case 'custom':
       return fetchDoubanRecommends(params, proxyUrl);
     case 'direct':
@@ -432,8 +425,8 @@ async function fetchDoubanRecommends(
   const baseUrl = useTencentCDN
     ? `https://m.douban.cmliussss.net/rexxar/api/v2/${kind}/recommend`
     : useAliCDN
-      ? `https://m.douban.cmliussss.com/rexxar/api/v2/${kind}/recommend`
-      : `https://m.douban.com/rexxar/api/v2/${kind}/recommend`;
+    ? `https://m.douban.cmliussss.com/rexxar/api/v2/${kind}/recommend`
+    : `https://m.douban.com/rexxar/api/v2/${kind}/recommend`;
   const reqParams = new URLSearchParams();
   reqParams.append('refresh', '0');
   reqParams.append('start', pageStart.toString());
@@ -477,3 +470,81 @@ async function fetchDoubanRecommends(
     throw new Error(`获取豆瓣推荐数据失败: ${(error as Error).message}`);
   }
 }
+
+/**
+ * 豆瓣榜单类型（subject_collection 主题合集）
+ */
+export type DoubanCollectionId =
+  | 'movie_top250' // 豆瓣电影 Top250
+  | 'movie_weekly_best'; // 每周口碑榜
+
+interface DoubanCollectionItem {
+  id: string;
+  title: string;
+  card_subtitle: string;
+  cover_url?: string;
+  pic?: { large?: string; normal?: string };
+  rating?: { value: number } | null;
+  rank?: number;
+}
+
+interface DoubanCollectionResponse {
+  total: number;
+  subject_collection_items: DoubanCollectionItem[];
+}
+
+/**
+ * 获取豆瓣榜单数据（Top250 / 每周口碑榜）。
+ *
+ * 数据源：rexxar `subject_collection/<id>/items`，条目带 rank（排名）、
+ * cover_url/pic（海报）、rating.value（评分）、card_subtitle（含年份）。
+ * 走与推荐接口一致的代理配置。
+ */
+export async function getDoubanCollection(
+  collectionId: DoubanCollectionId,
+  pageStart = 0,
+  pageLimit = 25
+): Promise<DoubanResult> {
+  const { proxyType, proxyUrl } = getDoubanProxyConfig();
+
+  const useTencentCDN = proxyType === 'cmliussss-cdn-tencent';
+  const useAliCDN = proxyType === 'cmliussss-cdn-ali';
+  const baseUrl = useTencentCDN
+    ? `https://m.douban.cmliussss.net/rexxar/api/v2/subject_collection/${collectionId}/items`
+    : useAliCDN
+      ? `https://m.douban.cmliussss.com/rexxar/api/v2/subject_collection/${collectionId}/items`
+      : `https://m.douban.com/rexxar/api/v2/subject_collection/${collectionId}/items`;
+
+  const proxy =
+    proxyType === 'cors-proxy-zwei'
+      ? 'https://ciao-cors.is-an.org/'
+      : proxyType === 'custom'
+        ? proxyUrl
+        : '';
+
+  try {
+    const response = await fetchWithTimeout(
+      `${baseUrl}?start=${pageStart}&count=${pageLimit}`,
+      useTencentCDN || useAliCDN ? '' : proxy
+    );
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+
+    const data = (await response.json()) as DoubanCollectionResponse;
+    const list: DoubanItem[] = (data.subject_collection_items || []).map(
+      (item) => ({
+        id: item.id,
+        title: item.title,
+        poster: item.cover_url || item.pic?.large || item.pic?.normal || '',
+        rate: item.rating?.value ? item.rating.value.toFixed(1) : '',
+        year: item.card_subtitle?.match(/(\d{4})/)?.[1] || '',
+      })
+    );
+
+    return { code: 200, message: '获取成功', list };
+  } catch (error) {
+    throw new Error(`获取豆瓣榜单失败: ${(error as Error).message}`);
+  }
+}
+

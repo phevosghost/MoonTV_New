@@ -1,9 +1,4 @@
 export interface AdminConfig {
-  ConfigSubscribtion: {
-    URL: string;
-    AutoUpdate: boolean;
-    LastCheck: string;
-  };
   ConfigFile: string;
   SiteConfig: {
     SiteName: string;
@@ -15,20 +10,26 @@ export interface AdminConfig {
     DoubanImageProxyType: string;
     DoubanImageProxy: string;
     DisableYellowFilter: boolean;
-    FluidSearch: boolean;
-    EnableWebLive: boolean;
+    // 弹幕接口配置
+    DanmakuApiBaseUrl?: string;
+    // TVBox 接口开关与访问密码
+    TVBoxEnabled?: boolean;
+    TVBoxPassword?: string;
+    // 播放进度自动保存间隔（秒），用于控制播放记录保存频率
+    PlaybackSaveInterval?: number;
   };
   UserConfig: {
+    AllowRegister: boolean;
     Users: {
       username: string;
       role: 'user' | 'admin' | 'owner';
       banned?: boolean;
-      enabledApis?: string[]; // 优先级高于tags限制
-      tags?: string[]; // 多 tags 取并集限制
+      group?: string;
+      lastOnline?: number;
     }[];
-    Tags?: {
+    Groups?: {
       name: string;
-      enabledApis: string[];
+      sourceKeys: string[];
     }[];
   };
   SourceConfig: {
@@ -46,16 +47,13 @@ export interface AdminConfig {
     from: 'config' | 'custom';
     disabled?: boolean;
   }[];
-  LiveConfig?: {
-    key: string;
-    name: string;
-    url: string;  // m3u 地址
-    ua?: string;
-    epg?: string; // 节目单
-    from: 'config' | 'custom';
-    channelNumber?: number;
-    disabled?: boolean;
-  }[];
+  SubscriptionConfig?: {
+    subscriptionUrl?: string;
+    autoUpdate?: boolean;
+    updateInterval?: number; // seconds
+    lastUpdated?: number; // timestamp in seconds
+    importMode?: 'overwrite' | 'merge';
+  };
 }
 
 export interface AdminConfigResult {

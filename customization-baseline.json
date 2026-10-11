@@ -1,0 +1,25 @@
+{
+  "upstream": "https://github.com/Stardm0/MoonTV.git",
+  "initialUpstreamCommit": "e6bcd14e53ffa5f7b18e072ae0f7debbf23f8be0",
+  "previousProductionCommit": "a7ca81c8ee673e7ef38509fccc277e158f52d9e5",
+  "siteName": "随风免费影院",
+  "sourceCount": 24,
+  "protectedFiles": {
+    "config.json": "b802d573ce6d176dd2df1897259677beb0e9e131ddfa80091f38d88613b5b3af",
+    "public/logo.png": "40d5ad313f9bccec8cd432d4e0ab3bfe3811061ed7e55e8abe46fde468fbee8d",
+    "public/favicon.ico": "21f11da90dca016c643d8b1c7bf9c07dbf6ea7f03ad8dcf7d3ee7ee9d6786c51",
+    "public/icons/icon-192x192.png": "4c0ab205a6aa596a5aa5479d2fc8f62bbcf56e4e19656642fca3b19aba27666a",
+    "public/icons/icon-256x256.png": "21cd7ce9a687e31808075c15440cf0bba4d125271db770a28211ba861ce494f6",
+    "public/icons/icon-384x384.png": "5922d033ecddaf29a3e27699c8fa6819193d0895a55ceda8d4a9a89e4aed1ef4",
+    "public/icons/icon-512x512.png": "bbf9ea0d32191443e9e90824c2cd1e24a0ae96daa2964c758257ea5525ed610c",
+    "src/lib/yellow.ts": "799a942584550b639bd9d9bc937e100a7758ab51b7efcb5e48e2abe09f489312"
+  },
+  "protectedSyncFiles": [
+    "customization-baseline.json",
+    "scripts/check-customizations.cjs",
+    "scripts/sync-stardm0.sh",
+    "docs/STARDM0_MIGRATION.md",
+    ".github/workflows/upstream-sync.yml",
+    ".github/workflows/customization-checks.yml"
+  ]
+}

@@ -93,58 +93,41 @@ html:not(.dark) body {
   }
 }
 
-/* 隐藏所有滚动条（兼容 WebKit、Firefox、IE/Edge） */
-* {
-  -ms-overflow-style: none; /* IE & Edge */
-  scrollbar-width: none; /* Firefox */
-}
-
-*::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Opera */
-}
-
-/* View Transitions API 动画 */
-@keyframes slide-from-top {
+/* View Transitions API 动画 - 整体渐变模式 */
+@keyframes fade-in {
   from {
-    clip-path: polygon(0 0, 100% 0, 100% 0, 0 0);
+    opacity: 0;
   }
   to {
-    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+    opacity: 1;
   }
 }
 
-@keyframes slide-from-bottom {
+@keyframes fade-out {
   from {
-    clip-path: polygon(0 100%, 100% 100%, 100% 100%, 0 100%);
+    opacity: 1;
   }
   to {
-    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+    opacity: 0;
   }
 }
 
 ::view-transition-old(root),
 ::view-transition-new(root) {
-  animation-duration: 0.8s;
+  animation-duration: 0.6s;
   animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   animation-fill-mode: both;
 }
 
 /*
-  切换时，旧的视图不应该有动画，它应该在下面，等待被新的视图覆盖。
-  这可以防止在动画完成前，页面底部提前变色。
+  整体渐变模式：旧视图淡出，新视图淡入
 */
 ::view-transition-old(root) {
-  animation: none;
+  animation-name: fade-out;
 }
 
-/* 从浅色到深色：新内容（深色）从顶部滑入 */
-html.dark::view-transition-new(root) {
-  animation-name: slide-from-top;
-}
-
-/* 从深色到浅色：新内容（浅色）从底部滑入 */
-html:not(.dark)::view-transition-new(root) {
-  animation-name: slide-from-bottom;
+::view-transition-new(root) {
+  animation-name: fade-in;
 }
 
 /* 强制播放器内部的 video 元素高度为 100%，并保持内容完整显示 */
@@ -158,6 +141,27 @@ div[data-media-provider] video {
   background-position: center center !important; /* 居中显示 */
   background-repeat: no-repeat !important; /* 防止重复 */
   background-color: #000 !important; /* 其余区域填充为黑色 */
+}
+
+/* 播放器内顶栏：和底部控制栏同步显隐，锁屏时一并藏起 */
+.art-video-player .moontv-play-header {
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.art-video-player:not(.art-control-show):not(.art-hover) .moontv-play-header,
+.art-video-player.art-hide-cursor .moontv-play-header,
+.art-video-player.art-lock .moontv-play-header {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none !important;
+}
+
+/* 全屏时 fixed 会相对播放器（或被 transform 限制），改成铺满播放器本身 */
+.art-video-player:fullscreen .moontv-player-modal > div,
+.art-video-player:-webkit-full-screen .moontv-player-modal > div,
+.art-video-player.art-fullscreen-web .moontv-player-modal > div,
+.art-video-player.art-fullscreen .moontv-player-modal > div {
+  position: absolute;
 }
 
 /* 隐藏移动端竖屏时的 pip 按钮 */
