@@ -2,10 +2,12 @@
 
 'use client';
 
-import { Cat, Clover, Film, Home, Radio, Star, Tv } from 'lucide-react';
+import { Cat, Clapperboard, Clover, Compass, Film, Home, Search, Tv } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
+
+import { useNavigationLoading } from './NavigationLoadingProvider';
 
 interface MobileBottomNavProps {
   /**
@@ -16,12 +18,14 @@ interface MobileBottomNavProps {
 
 const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
   const pathname = usePathname();
+  const { startLoading } = useNavigationLoading();
 
   // 当前激活路径：优先使用传入的 activePath，否则回退到浏览器地址
   const currentActive = activePath ?? pathname;
 
-  const [navItems, setNavItems] = useState([
+  const [navItems] = useState([
     { icon: Home, label: '首页', href: '/' },
+    { icon: Search, label: '搜索', href: '/search' },
     {
       icon: Film,
       label: '电影',
@@ -33,6 +37,16 @@ const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
       href: '/douban?type=tv',
     },
     {
+      icon: Clapperboard,
+      label: '短剧',
+      href: '/douban?type=short',
+    },
+    {
+      icon: Compass,
+      label: '纪录片',
+      href: '/douban?type=doc',
+    },
+    {
       icon: Cat,
       label: '动漫',
       href: '/douban?type=anime',
@@ -42,24 +56,19 @@ const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
       label: '综艺',
       href: '/douban?type=show',
     },
-    {
-      icon: Radio,
-      label: '直播',
-      href: '/live',
-    },
   ]);
 
+  // 检查是否启用简洁模式 - 使用状态管理
+  const [simpleMode, setSimpleMode] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+
   useEffect(() => {
-    const runtimeConfig = (window as any).RUNTIME_CONFIG;
-    if (runtimeConfig?.CUSTOM_CATEGORIES?.length > 0) {
-      setNavItems((prevItems) => [
-        ...prevItems,
-        {
-          icon: Star,
-          label: '自定义',
-          href: '/douban?type=custom',
-        },
-      ]);
+    setIsClient(true);
+    if (typeof window !== 'undefined') {
+      const savedSimpleMode = localStorage.getItem('simpleMode');
+      if (savedSimpleMode !== null) {
+        setSimpleMode(JSON.parse(savedSimpleMode));
+      }
     }
   }, []);
 
@@ -90,20 +99,39 @@ const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
       <ul className='flex items-center overflow-x-auto scrollbar-hide'>
         {navItems.map((item) => {
           const active = isActive(item.href);
+          
+          // 简洁模式下只显示首页和搜索，但在服务器端渲染时先不渲染
+          if (!isClient) {
+            return null; // 服务器端渲染时不显示任何内容，避免闪烁
+          }
+          
+          if (simpleMode && !['/', '/search'].includes(item.href)) {
+            return null;
+          }
+
           return (
             <li
               key={item.href}
               className='flex-shrink-0'
-              style={{ width: '20vw', minWidth: '20vw' }}
+              style={{
+                width: simpleMode ? '50vw' : '20vw',
+                minWidth: simpleMode ? '50vw' : '20vw'
+              }}
             >
               <Link
                 href={item.href}
                 className='flex flex-col items-center justify-center w-full h-14 gap-1 text-xs'
+                onClick={() => {
+                  // 如果不是当前激活的链接，则触发加载动画
+                  if (!active) {
+                    startLoading();
+                  }
+                }}
               >
                 <item.icon
                   className={`h-6 w-6 ${active
-                    ? 'text-green-600 dark:text-green-400'
-                    : 'text-gray-500 dark:text-gray-400'
+                      ? 'text-green-600 dark:text-green-400'
+                      : 'text-gray-500 dark:text-gray-400'
                     }`}
                 />
                 <span
@@ -124,4 +152,5 @@ const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
   );
 };
 
-export default MobileBottomNav;
+// 使用 React.memo 优化，避免父组件更新时导致不必要的重新渲染
+export default memo(MobileBottomNav);

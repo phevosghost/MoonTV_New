@@ -1,5 +1,34 @@
 import { NextRequest } from 'next/server';
 
+type AuthInfo = {
+  password?: string;
+  username?: string;
+  signature?: string;
+  timestamp?: number;
+  role?: 'owner' | 'admin' | 'user';
+};
+
+export function parseAuthCookie(value: string): AuthInfo | null {
+  let decoded = value;
+  // NextResponse can encode an already encoded cookie a second time.
+  for (let attempt = 0; attempt <= 2; attempt += 1) {
+    try {
+      const data = JSON.parse(decoded);
+      return data && typeof data === 'object' && !Array.isArray(data)
+        ? data
+        : null;
+    } catch {
+      if (attempt === 2) return null;
+      try {
+        decoded = decodeURIComponent(decoded);
+      } catch {
+        return null;
+      }
+    }
+  }
+  return null;
+}
+
 // 从cookie获取认证信息 (服务端使用)
 export function getAuthInfoFromCookie(request: NextRequest): {
   password?: string;
@@ -13,19 +42,15 @@ export function getAuthInfoFromCookie(request: NextRequest): {
     return null;
   }
 
-  try {
-    let decoded = decodeURIComponent(authCookie.value);
-    if (decoded.includes('%')) {
-      decoded = decodeURIComponent(decoded);
-    }
-    const authData = JSON.parse(decoded);
-    if (!authData.username) {
-      authData.username = process.env.USERNAME || 'localstorage';
-    }
-    return authData;
-  } catch (error) {
-    return null;
+  const authData = parseAuthCookie(authCookie.value);
+  if (
+    authData &&
+    !authData.username &&
+    (process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage') === 'localstorage'
+  ) {
+    authData.username = process.env.USERNAME || 'localstorage';
   }
+  return authData;
 }
 
 // 从cookie获取认证信息 (客户端使用)
@@ -62,16 +87,7 @@ export function getAuthInfoFromBrowserCookie(): {
       return null;
     }
 
-    // 处理可能的双重编码
-    let decoded = decodeURIComponent(authCookie);
-
-    // 如果解码后仍然包含 %，说明是双重编码，需要再次解码
-    if (decoded.includes('%')) {
-      decoded = decodeURIComponent(decoded);
-    }
-
-    const authData = JSON.parse(decoded);
-    return authData;
+    return parseAuthCookie(authCookie);
   } catch (error) {
     return null;
   }

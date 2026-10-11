@@ -1,0 +1,58 @@
+name: Sync Stardm0 Safely
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: stardm0-upstream-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Prepare update branch
+        id: sync
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          bash scripts/sync-stardm0.sh
+      - name: Verify update
+        if: steps.sync.outputs.changed == 'true'
+        env:
+          VERCEL: '1'
+          NEXT_PUBLIC_STORAGE_TYPE: localstorage
+          NEXT_PUBLIC_SITE_NAME: 随风免费影院
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.14.0 --activate
+          pnpm install --frozen-lockfile
+          pnpm gen:runtime
+          node scripts/check-customizations.cjs
+          pnpm typecheck
+          pnpm test --runInBand
+          pnpm build
+      - name: Open update pull request
+        if: steps.sync.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ steps.sync.outputs.branch }}
+          UPSTREAM: ${{ steps.sync.outputs.upstream }}
+        run: |
+          git push origin "HEAD:refs/heads/$BRANCH"
+          if ! gh pr view "$BRANCH" --json url >/dev/null 2>&1; then
+            gh pr create --base main --head "$BRANCH" \
+              --title "Sync Stardm0 ${UPSTREAM:0:12}" \
+              --body 'Upstream update with site artwork, source configuration and authentication compatibility preserved. Local checks passed; verify the Vercel preview before merging. This workflow does not deploy production.'
+          fi

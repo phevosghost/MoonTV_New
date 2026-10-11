@@ -4,20 +4,18 @@ import Hls from 'hls.js';
 
 function getDoubanImageProxyConfig(): {
   proxyType:
-  | 'server'
-  | 'cmliussss-cdn-tencent'
-  | 'cmliussss-cdn-ali'
-  | 'custom';
+    | 'direct'
+    | 'server'
+    | 'img3'
+    | 'cmliussss-cdn-tencent'
+    | 'cmliussss-cdn-ali'
+    | 'custom';
   proxyUrl: string;
 } {
-  let doubanImageProxyType =
+  const doubanImageProxyType =
     localStorage.getItem('doubanImageProxyType') ||
     (window as any).RUNTIME_CONFIG?.DOUBAN_IMAGE_PROXY_TYPE ||
-    'cmliussss-cdn-tencent';
-  // 兼容历史数据：直连和豆瓣官方精品 CDN 统一使用服务器代理
-  if (doubanImageProxyType === 'direct' || doubanImageProxyType === 'img3') {
-    doubanImageProxyType = 'server';
-  }
+    'direct';
   const doubanImageProxy =
     localStorage.getItem('doubanImageProxyUrl') ||
     (window as any).RUNTIME_CONFIG?.DOUBAN_IMAGE_PROXY ||
@@ -34,29 +32,49 @@ function getDoubanImageProxyConfig(): {
 export function processImageUrl(originalUrl: string): string {
   if (!originalUrl) return originalUrl;
 
+  const normalizedUrl = originalUrl.trim();
+
+  // 已经是本地代理、内联资源或本地资源时，直接返回
+  if (
+    normalizedUrl.startsWith('/api/image-proxy?url=') ||
+    normalizedUrl.startsWith('data:') ||
+    normalizedUrl.startsWith('blob:') ||
+    normalizedUrl.startsWith('/')
+  ) {
+    return normalizedUrl;
+  }
+
+  // HTTPS 页面下直接加载 http 图片会触发 Mixed Content，统一走服务端代理兜底
+  if (normalizedUrl.startsWith('http://')) {
+    return `/api/image-proxy?url=${encodeURIComponent(normalizedUrl)}`;
+  }
+
   // 仅处理豆瓣图片代理
-  if (!originalUrl.includes('doubanio.com')) {
-    return originalUrl;
+  if (!normalizedUrl.includes('doubanio.com')) {
+    return normalizedUrl;
   }
 
   const { proxyType, proxyUrl } = getDoubanImageProxyConfig();
   switch (proxyType) {
     case 'server':
-      return `/api/image-proxy?url=${encodeURIComponent(originalUrl)}`;
+      return `/api/image-proxy?url=${encodeURIComponent(normalizedUrl)}`;
+    case 'img3':
+      return normalizedUrl.replace(/img\d+\.doubanio\.com/g, 'img3.doubanio.com');
     case 'cmliussss-cdn-tencent':
-      return originalUrl.replace(
+      return normalizedUrl.replace(
         /img\d+\.doubanio\.com/g,
         'img.doubanio.cmliussss.net'
       );
     case 'cmliussss-cdn-ali':
-      return originalUrl.replace(
+      return normalizedUrl.replace(
         /img\d+\.doubanio\.com/g,
         'img.doubanio.cmliussss.com'
       );
     case 'custom':
-      return `${proxyUrl}${encodeURIComponent(originalUrl)}`;
+      return `${proxyUrl}${encodeURIComponent(normalizedUrl)}`;
+    case 'direct':
     default:
-      return `/api/image-proxy?url=${encodeURIComponent(originalUrl)}`;
+      return normalizedUrl;
   }
 }
 
@@ -130,14 +148,14 @@ export async function getVideoResolutionFromM3u8(m3u8Url: string): Promise<{
               width >= 3840
                 ? '4K' // 4K: 3840x2160
                 : width >= 2560
-                  ? '2K' // 2K: 2560x1440
-                  : width >= 1920
-                    ? '1080p' // 1080p: 1920x1080
-                    : width >= 1280
-                      ? '720p' // 720p: 1280x720
-                      : width >= 854
-                        ? '480p'
-                        : 'SD'; // 480p: 854x480
+                ? '2K' // 2K: 2560x1440
+                : width >= 1920
+                ? '1080p' // 1080p: 1920x1080
+                : width >= 1280
+                ? '720p' // 720p: 1280x720
+                : width >= 854
+                ? '480p'
+                : 'SD'; // 480p: 854x480
 
             resolve({
               quality,
@@ -210,7 +228,8 @@ export async function getVideoResolutionFromM3u8(m3u8Url: string): Promise<{
     });
   } catch (error) {
     throw new Error(
-      `Error getting video resolution: ${error instanceof Error ? error.message : String(error)
+      `Error getting video resolution: ${
+        error instanceof Error ? error.message : String(error)
       }`
     );
   }
@@ -228,4 +247,28 @@ export function cleanHtmlTags(text: string): string {
 
   // 使用 he 库解码 HTML 实体
   return he.decode(cleanedText);
+}
+
+/**
+ * 获取配置的超时时间（秒）
+ * 从 localStorage 读取，如果不存在或无效则返回默认值3秒
+ */
+export function getRequestTimeout(): number {
+  if (typeof window === 'undefined') {
+    return 30; // 服务器端返回默认值
+  }
+  
+  try {
+    const savedTimeout = localStorage.getItem('requestTimeout');
+    if (savedTimeout) {
+      const timeoutSeconds = parseInt(savedTimeout, 10);
+      if (!isNaN(timeoutSeconds) && timeoutSeconds >= 1 && timeoutSeconds <= 60) {
+        return timeoutSeconds;
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to read timeout from localStorage:', error);
+  }
+  
+  return 30; // 默认30秒
 }

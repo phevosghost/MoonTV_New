@@ -4,22 +4,31 @@ import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 
 import './globals.css';
+import 'sweetalert2/dist/sweetalert2.min.css';
 
 import { getConfig } from '@/lib/config';
+import { getDefaultPlaybackSaveInterval } from '@/lib/playback-settings';
 
+import ConditionalNav from '../components/ConditionalNav';
+import GlobalDownloadManager from '../components/GlobalDownloadManager';
 import { GlobalErrorIndicator } from '../components/GlobalErrorIndicator';
+import { NavigationLoadingIndicator } from '../components/NavigationLoadingIndicator';
+import { NavigationLoadingProvider } from '../components/NavigationLoadingProvider';
+import ServiceWorkerRegistration from '../components/ServiceWorkerRegistration';
 import { SiteProvider } from '../components/SiteProvider';
+import SubscriptionAutoUpdate from '../components/SubscriptionAutoUpdate';
 import { ThemeProvider } from '../components/ThemeProvider';
+import UserOnlineUpdate from '../components/UserOnlineUpdate';
+
+export const runtime = 'edge';
 
 const inter = Inter({ subsets: ['latin'] });
-export const dynamic = 'force-dynamic';
 
 // 动态生成 metadata，支持配置更新后的标题变化
 export async function generateMetadata(): Promise<Metadata> {
-  const storageType = process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage';
-  const config = await getConfig();
   let siteName = process.env.NEXT_PUBLIC_SITE_NAME || 'MoonTV';
-  if (storageType !== 'localstorage') {
+  if (process.env.NEXT_PUBLIC_STORAGE_TYPE !== 'localstorage') {
+    const config = await getConfig();
     siteName = config.SiteConfig.SiteName;
   }
 
@@ -45,53 +54,53 @@ export default async function RootLayout({
   let announcement =
     process.env.ANNOUNCEMENT ||
     '本网站仅提供影视信息搜索服务，所有内容均来自第三方网站。本站不存储任何视频资源，不对任何内容的准确性、合法性、完整性负责。';
-
-  let doubanProxyType = process.env.NEXT_PUBLIC_DOUBAN_PROXY_TYPE || 'cmliussss-cdn-tencent';
+  let enableRegister = process.env.NEXT_PUBLIC_ENABLE_REGISTER === 'true';
+  let doubanProxyType = process.env.NEXT_PUBLIC_DOUBAN_PROXY_TYPE || 'direct';
   let doubanProxy = process.env.NEXT_PUBLIC_DOUBAN_PROXY || '';
   let doubanImageProxyType =
-    process.env.NEXT_PUBLIC_DOUBAN_IMAGE_PROXY_TYPE || 'cmliussss-cdn-tencent';
+    process.env.NEXT_PUBLIC_DOUBAN_IMAGE_PROXY_TYPE || 'direct';
   let doubanImageProxy = process.env.NEXT_PUBLIC_DOUBAN_IMAGE_PROXY || '';
   let disableYellowFilter =
     process.env.NEXT_PUBLIC_DISABLE_YELLOW_FILTER === 'true';
-  let fluidSearch = process.env.NEXT_PUBLIC_FLUID_SEARCH !== 'false';
-  let enableWebLive = false;
-  let customCategories = [] as {
-    name: string;
-    type: 'movie' | 'tv';
-    query: string;
-  }[];
+  let danmakuApiBaseUrl =
+    process.env.NEXT_PUBLIC_DANMU_API_BASE_URL ||
+    '';
+  let playbackSaveInterval =
+    Number(process.env.NEXT_PUBLIC_PLAYBACK_SAVE_INTERVAL) ||
+    getDefaultPlaybackSaveInterval(storageType);
+  let autoUpdateEnabled = false;
   if (storageType !== 'localstorage') {
     const config = await getConfig();
     siteName = config.SiteConfig.SiteName;
     announcement = config.SiteConfig.Announcement;
-
+    enableRegister = config.UserConfig.AllowRegister;
     doubanProxyType = config.SiteConfig.DoubanProxyType;
     doubanProxy = config.SiteConfig.DoubanProxy;
     doubanImageProxyType = config.SiteConfig.DoubanImageProxyType;
     doubanImageProxy = config.SiteConfig.DoubanImageProxy;
     disableYellowFilter = config.SiteConfig.DisableYellowFilter;
-    customCategories = config.CustomCategories.filter(
-      (category) => !category.disabled
-    ).map((category) => ({
-      name: category.name || '',
-      type: category.type,
-      query: category.query,
-    }));
-    fluidSearch = config.SiteConfig.FluidSearch;
-    enableWebLive = config.SiteConfig.EnableWebLive ?? false;
+    danmakuApiBaseUrl =
+      config.SiteConfig.DanmakuApiBaseUrl || danmakuApiBaseUrl;
+    playbackSaveInterval =
+      typeof config.SiteConfig.PlaybackSaveInterval === 'number' &&
+      config.SiteConfig.PlaybackSaveInterval > 0
+        ? config.SiteConfig.PlaybackSaveInterval
+        : Number(process.env.NEXT_PUBLIC_PLAYBACK_SAVE_INTERVAL) ||
+          getDefaultPlaybackSaveInterval(storageType);
+    autoUpdateEnabled = config.SubscriptionConfig?.autoUpdate === true;
   }
 
   // 将运行时配置注入到全局 window 对象，供客户端在运行时读取
   const runtimeConfig = {
     STORAGE_TYPE: process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage',
+    ENABLE_REGISTER: enableRegister,
     DOUBAN_PROXY_TYPE: doubanProxyType,
     DOUBAN_PROXY: doubanProxy,
     DOUBAN_IMAGE_PROXY_TYPE: doubanImageProxyType,
     DOUBAN_IMAGE_PROXY: doubanImageProxy,
     DISABLE_YELLOW_FILTER: disableYellowFilter,
-    CUSTOM_CATEGORIES: customCategories,
-    FLUID_SEARCH: fluidSearch,
-    ENABLE_WEB_LIVE: enableWebLive,
+    DANMU_API_BASE_URL: danmakuApiBaseUrl,
+    PLAYBACK_SAVE_INTERVAL: playbackSaveInterval,
   };
 
   return (
@@ -119,10 +128,34 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <SiteProvider siteName={siteName} announcement={announcement}>
-            {children}
-            <GlobalErrorIndicator />
-          </SiteProvider>
+          <ServiceWorkerRegistration />
+          <NavigationLoadingProvider>
+            <SiteProvider siteName={siteName} announcement={announcement}>
+              <NavigationLoadingIndicator />
+              <UserOnlineUpdate />
+              
+              {/* 条件导航栏 - 根据路径自动判断是否显示 */}
+              <ConditionalNav />
+              
+              {/* 全局下载管理器 - 只渲染一次，被所有导航栏共享 */}
+              <GlobalDownloadManager />
+              
+              {/* 页面内容 */}
+              <div className='relative w-full'>
+                <main
+                  className='flex-1 mb-14 md:mb-0'
+                  style={{
+                    paddingBottom: 'calc(3.5rem + env(safe-area-inset-bottom))',
+                  }}
+                >
+                  {children}
+                </main>
+              </div>
+              
+              <GlobalErrorIndicator />
+              {autoUpdateEnabled && <SubscriptionAutoUpdate />}
+            </SiteProvider>
+          </NavigationLoadingProvider>
         </ThemeProvider>
       </body>
     </html>
