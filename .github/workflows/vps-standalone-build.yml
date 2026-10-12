@@ -19,7 +19,7 @@ jobs:
       DOCKER_ENV: 'true'
       NEXT_PUBLIC_STORAGE_TYPE: localstorage
       NEXT_PUBLIC_SITE_NAME: 随风免费影院
-      NEXT_PUBLIC_DISABLE_YELLOW_FILTER: 'true'
+      NEXT_PUBLIC_DISABLE_YELLOW_FILTER: 'false'
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
