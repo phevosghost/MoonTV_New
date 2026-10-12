@@ -1,0 +1,91 @@
+name: Build VPS Standalone
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - codex/vps-standalone-build
+    paths:
+      - .github/workflows/vps-standalone-build.yml
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      DOCKER_ENV: 'true'
+      NEXT_PUBLIC_STORAGE_TYPE: localstorage
+      NEXT_PUBLIC_SITE_NAME: 随风免费影院
+      NEXT_PUBLIC_DISABLE_YELLOW_FILTER: 'true'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.23.3'
+      - name: Install locked dependencies
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.14.0 --activate
+          pnpm install --frozen-lockfile
+      - name: Verify preserved settings and tests
+        run: |
+          pnpm gen:runtime
+          node scripts/check-customizations.cjs
+          pnpm typecheck
+          pnpm test --runInBand
+      - name: Select the self-hosted Node runtime
+        run: |
+          find ./src -type f \( -name 'route.ts' -o -name 'layout.tsx' -o -name 'not-found.tsx' \) -print0 |
+            xargs -0 sed -i "s/export const runtime = 'edge';/export const runtime = 'nodejs';/g"
+          sed -i "/const inter = Inter({ subsets: \['latin'\] });/a export const dynamic = 'force-dynamic';" src/app/layout.tsx
+      - name: Build and package standalone application
+        run: |
+          pnpm build
+          mkdir -p dist/app/.next
+          cp -a .next/standalone/. dist/app/
+          cp -a .next/static dist/app/.next/static
+          cp -a public scripts dist/app/
+          cp config.json customization-baseline.json start.js dist/app/
+          node -e "require('fs').writeFileSync('dist/app/RELEASE.json', JSON.stringify({commit:process.env.GITHUB_SHA,source:'phevosghost/MoonTV_New',runtime:'node22-linux-x64',builtAt:new Date().toISOString()},null,2))"
+          tar -C dist/app -czf dist/moontv-linux-x64.tar.gz .
+          sha256sum dist/moontv-linux-x64.tar.gz > dist/SHA256SUMS
+      - name: Smoke-test packaged application
+        run: |
+          export PASSWORD="$(node -e "process.stdout.write(require('crypto').randomBytes(24).toString('hex'))")"
+          cd dist/app
+          HOSTNAME=127.0.0.1 PORT=3180 node start.js > ../../standalone-smoke.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          node <<'NODE'
+          const assert = require('node:assert/strict');
+          (async () => {
+            const base = 'http://127.0.0.1:3180';
+            for (let i = 0; i < 60; i++) {
+              try { if ((await fetch(base + '/login')).ok) break; } catch {}
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            assert.equal((await fetch(base + '/api/search/resources')).status, 401);
+            assert.equal((await fetch(base + '/api/m3u8?url=https%3A%2F%2Fexample.com%2Ftest.ts')).status, 401);
+            const login = await fetch(base + '/api/login', {method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({password:process.env.PASSWORD})});
+            assert.equal(login.status, 200);
+            const cookie = login.headers.get('set-cookie').split(';')[0];
+            const sources = await fetch(base + '/api/config/sources', {headers:{cookie}});
+            assert.equal(sources.status, 200);
+            assert.equal((await sources.json()).length, 24);
+            const config = await (await fetch(base + '/api/server-config')).json();
+            assert.equal(config.SiteName, '\u968f\u98ce\u514d\u8d39\u5f71\u9662');
+            console.log('Standalone login, 24-source configuration and private routes passed.');
+          })().catch(error => { console.error(error); process.exit(1); });
+          NODE
+      - name: Upload immutable deployment bundle
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: moontv-linux-x64
+          path: |
+            dist/moontv-linux-x64.tar.gz
+            dist/SHA256SUMS
+          retention-days: 7
+          compression-level: 0
